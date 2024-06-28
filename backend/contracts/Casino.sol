@@ -26,8 +26,12 @@ contract Casino is Ownable, ReentrancyGuard {
         uint8 gameType,
         uint256 betAmount
     );
-    event PlayerWon(address indexed player, uint256 amount);
-    event PlayerLost(address indexed player, uint256 amount);
+    event PlayerWon(
+        address indexed player,
+        uint256 betAmount,
+        uint256 WinAmount
+    );
+    event PlayerLost(address indexed player, uint256 betAmount);
     event PlayerWithdrewTokens(address indexed player, uint256 amount);
     event PlayerBecameInactive(address indexed player);
 
@@ -39,6 +43,10 @@ contract Casino is Ownable, ReentrancyGuard {
 
     function needTokens(uint256 _numTokens) internal pure returns (uint256) {
         return _numTokens * (0.0003 ether);
+    }
+
+    function mintNewtokens(uint256 _numTokens) public payable {
+        token.mint(_numTokens * 100000);
     }
 
     // Buy tokens by sending ETH
@@ -133,7 +141,7 @@ contract Casino is Ownable, ReentrancyGuard {
         uint256 payoutProbability = gameType == 1 ? 9 : 25;
 
         require(
-            getPlayerTokenBalance(msg.sender) >= betAmount,
+            getPlayerTokenBalance() >= betAmount,
             "Insufficient token balance"
         );
 
@@ -141,27 +149,29 @@ contract Casino is Ownable, ReentrancyGuard {
         token.transfer(msg.sender, address(this), betAmount);
 
         uint256 result = uint256(
-            keccak256(abi.encodePacked(block.timestamp, msg.sender))
+            keccak256(
+                abi.encodePacked(block.timestamp, msg.sender, block.number)
+            )
         ) % payoutProbability;
-        uint256 payout = 0;
+        uint256 WinAmount = 0;
         if (result == 0) {
-            payout = betAmount * payoutMultiplier;
+            WinAmount = betAmount * payoutMultiplier;
 
             // Réinitialisation du paiement quotidien du joueur
             resetDailyPayout(msg.sender);
 
             // Vérifie si la limite de paiement quotidien est atteinte
             require(
-                dailyPayouts[msg.sender] + payout <= MAX_DAILY_PAYOUT,
+                dailyPayouts[msg.sender] + WinAmount <= MAX_DAILY_PAYOUT,
                 "Daily payout limit reached"
             );
 
             // Mise à jour des gains du joueur et émission de l'événement
-            playerGains[msg.sender] += payout;
-            dailyPayouts[msg.sender] += payout;
-            emit PlayerWon(msg.sender, payout);
+            playerGains[msg.sender] += WinAmount;
+            dailyPayouts[msg.sender] += WinAmount;
+            emit PlayerWon(msg.sender, betAmount, WinAmount);
         } else {
-            emit PlayerLost(msg.sender, payout);
+            emit PlayerLost(msg.sender, betAmount);
             if (token.balanceOf(msg.sender) == 0) {
                 isAnActiveUser[msg.sender] = false;
                 emit PlayerBecameInactive(msg.sender);
@@ -169,12 +179,12 @@ contract Casino is Ownable, ReentrancyGuard {
         }
 
         // Si le joueur gagne, ajoute le paiement à son solde
-        if (payout > 0) {
-            if (token.balanceOf(address(this)) < payout) {
+        if (WinAmount > 0) {
+            if (token.balanceOf(address(this)) <= WinAmount) {
                 // Mint de nouveaux tokens si nécessaire
-                token.mint(payout * 100000); // Exemple de mint, à adapter selon votre implémentation
+                mintNewtokens(WinAmount);
             }
-            token.transfer(address(this), msg.sender, payout);
+            token.transfer(address(this), msg.sender, WinAmount);
         }
 
         // Émission de l'événement pour le jeu joué
@@ -187,14 +197,12 @@ contract Casino is Ownable, ReentrancyGuard {
     }
 
     // Getter for player's token balance restricted to active users or owner
-    function getPlayerTokenBalance(
-        address player
-    ) public view returns (uint256) {
+    function getPlayerTokenBalance() public view returns (uint256) {
         require(
             isAnActiveUser[msg.sender] || msg.sender == owner(),
             "Only active users or the owner can view the balance"
         );
-        return token.balanceOf(player);
+        return token.balanceOf(msg.sender);
     }
 
     // Getter for player's gains restricted to active users or owner
