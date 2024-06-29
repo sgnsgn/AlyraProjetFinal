@@ -1,0 +1,30 @@
+@keyframes spin {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-100%);
+  }
+}
+
+.slot-machine {
+  display: flex;
+  justify-content: center;
+}
+
+.reel {
+  font-size: 6em; /* Augmenter la taille des motifs */
+  width: 100px; /* Largeur du rouleau */
+  height: 100px; /* Hauteur du rouleau */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid black;
+  margin: 0 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.reel.spinning {
+  animation: spin 0.1s linear infinite;
+}
