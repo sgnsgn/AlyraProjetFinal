@@ -11,10 +11,12 @@ const SlotMachine = () => {
   const [reel3, setReel3] = useState("🍋");
   const [spinning, setSpinning] = useState(false);
   const [winning, setWinning] = useState(false);
+  const [resultMessage, setResultMessage] = useState("");
 
   const spinReels = () => {
     setSpinning(true);
     setWinning(false);
+    setResultMessage("");
 
     setTimeout(() => {
       const result = getRandomNumber();
@@ -26,7 +28,7 @@ const SlotMachine = () => {
         setReel2(winningSymbol);
         setReel3(winningSymbol);
         setWinning(true);
-        console.log(
+        setResultMessage(
           `Résultat gagnant: ${result}, Symboles: ${winningSymbol}-${winningSymbol}-${winningSymbol}`
         );
       } else {
@@ -45,7 +47,7 @@ const SlotMachine = () => {
         setReel1(randomSymbols[0]);
         setReel2(randomSymbols[1]);
         setReel3(randomSymbols[2]);
-        console.log(
+        setResultMessage(
           `Résultat perdant: ${result}, Symboles: ${randomSymbols[0]}-${randomSymbols[1]}-${randomSymbols[2]}`
         );
       }
@@ -69,6 +71,7 @@ const SlotMachine = () => {
 
   return (
     <div style={{ textAlign: "center", padding: "50px" }}>
+      <div className="text-2xl mb-4">Slot Machine</div>
       <div className="slot-machine">
         <div className={`reel ${spinning ? "spinning" : ""}`}>{reel1}</div>
         <div className={`reel ${spinning ? "spinning" : ""}`}>{reel2}</div>
@@ -78,10 +81,10 @@ const SlotMachine = () => {
       <button onClick={spinReels} disabled={spinning}>
         {spinning ? "Spinning..." : "Spin"}
       </button>
-      {winning && <div>Congratulations! You won!</div>}
-      <div>
-        {`Résultat perdant: ${result}, Symboles: ${randomSymbols[0]}-${randomSymbols[1]}-${randomSymbols[2]}`}
+      <div style={{ marginTop: "20px", fontSize: "1.2em" }}>
+        {resultMessage}
       </div>
+      {winning && <div>Congratulations! You won!</div>}
     </div>
   );
 };
