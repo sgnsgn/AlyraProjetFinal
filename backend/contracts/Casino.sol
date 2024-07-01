@@ -3,33 +3,36 @@ pragma solidity 0.8.24;
 
 import "./CasinoToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-
-// import for testing in remix
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/ReentrancyGuard.sol";
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract Casino is Ownable, ReentrancyGuard {
     CasinoToken private token;
     address public tokenAddress;
-    uint256 public constant MAX_DAILY_PAYOUT = 1 ether; // Maximum daily payout
     uint256 private constant TOKEN_PRICE = 0.0003 ether;
 
-    mapping(address => bool) public isAnActiveUser;
-    mapping(address => uint256) public playerGains;
-    mapping(address => uint256) public dailyPayouts;
-    mapping(address => uint256) public lastPayoutReset;
+    struct Player {
+        uint256 totalGains; // Total gains accumulated by the player
+        uint256 biggestWin; // Biggest single win amount by the player
+        uint256 nbGames; // Number of games played by the player
+        uint256 nbGamesWins; // Number of games won by the player
+    }
+
+    mapping(address => Player) public players;
+
+    uint256 public biggestSingleWinEver;
+    uint256 public biggestTotalWinEver;
 
     event PlayerBoughtTokens(address indexed player, uint256 amount);
     event PlayerPlayedGame(
         address indexed player,
         uint8 gameType,
-        uint256 betAmount
+        uint256 betAmount,
+        uint256 winAmount
     );
     event PlayerWon(
         address indexed player,
         uint256 betAmount,
-        uint256 WinAmount
+        uint256 winAmount
     );
     event PlayerLost(address indexed player, uint256 betAmount);
     event PlayerWithdrewTokens(address indexed player, uint256 amount);
@@ -41,54 +44,42 @@ contract Casino is Ownable, ReentrancyGuard {
         token.mint(1000000);
     }
 
-    function needTokens(uint256 _numTokens) internal pure returns (uint256) {
-        return _numTokens * (0.0003 ether);
-    }
-
-    function mintNewtokens(uint256 _numTokens) public payable {
-        token.mint(_numTokens * 100000);
+    function convertTokens(uint256 _numTokens) internal pure returns (uint256) {
+        return _numTokens * TOKEN_PRICE;
     }
 
     // Buy tokens by sending ETH
-    function buyTokens(uint256 _numTokens) public payable {
-        // Can't send less than 0.0003
+    function buyTokens(uint256 _numTokens) public payable nonReentrant {
         require(
-            msg.value >= 0.0003 ether,
+            msg.value >= TOKEN_PRICE,
             "You can't send less than 0.0003 ETH"
         );
-        // Refund excess ether if the buyer sends more than required for purchasing tokens
         require(
-            msg.value >= needTokens(_numTokens),
+            msg.value >= convertTokens(_numTokens),
             "You need more eth for this quantity of tokens"
         );
+        require(
+            token.balanceOf(address(this)) >= convertTokens(_numTokens),
+            "Not enough tokens in the contract"
+        );
 
-        // Calculate the number of tokens to buy based on ETH sent
-        uint256 tokensToBuy = needTokens(msg.value);
+        uint256 tokensToBuy = convertTokens(msg.value);
 
-        // Mint new tokens if there is not enough supply
-        if (token.balanceOf(address(this)) < _numTokens) {
-            token.mint(_numTokens * 100000);
-        }
+        // if (token.balanceOf(address(this)) < _numTokens) {
+        //     token.mint(_numTokens * 100000);
+        // }
 
-        // Transfer tokens to the buyer
         token.transfer(address(this), msg.sender, _numTokens);
 
-        // Update active user status
-        isAnActiveUser[msg.sender] = true;
-
-        // Emit event for token purchase
         emit PlayerBoughtTokens(msg.sender, tokensToBuy);
     }
 
     // Return tokens to the Smart Contract
-    function devolverTokens(uint _numTokens) public payable {
-        // Check: The number of tokens must be greater than 0
+    function devolverTokens(uint256 _numTokens) public payable nonReentrant {
         require(
             _numTokens > 0,
             "You need to return a number of tokens greater than 0"
         );
-
-        // Check: The user must have the tokens they want to return
         require(
             _numTokens <= token.balanceOf(msg.sender),
             "Insufficient token balance"
@@ -101,137 +92,115 @@ contract Casino is Ownable, ReentrancyGuard {
         emit PlayerWithdrewTokens(msg.sender, _numTokens);
 
         // Interactions: Transfer ethers to the user
-        payable(msg.sender).transfer(needTokens(_numTokens));
+        payable(msg.sender).transfer(convertTokens(_numTokens));
 
-        // Check and Effect: Update active user status if the balance becomes zero
         if (token.balanceOf(msg.sender) == 0) {
-            isAnActiveUser[msg.sender] = false;
             emit PlayerBecameInactive(msg.sender);
         }
     }
 
-    // Reset daily payout for a player if a day has passed
-    function resetDailyPayout(address player) internal {
-        if (block.timestamp - lastPayoutReset[player] > 1 days) {
-            dailyPayouts[player] = 0;
-            lastPayoutReset[player] = block.timestamp;
-        }
-    }
-
     // Play the game with specified bet amount and game type
-    function playGame(uint8 gameType, uint256 betAmount) public nonReentrant {
+    function playGame(
+        uint8 gameType,
+        uint256 betAmount
+    ) public payable nonReentrant {
+        require(betAmount > 0, "Bet amount must be greater than zero");
         require(
             betAmount <= token.balanceOf(msg.sender),
-            "Insufficient tokens balance for gameType 1"
+            "Insufficient tokens balance"
         );
-        require(betAmount > 0, "Bet amount must be greater than zero");
-
-        if (gameType == 1) {
-            //
-        } else if (gameType == 2) {
-            require(
-                betAmount % 3 == 0,
-                "Bet amount for gameType 2 must be a multiple of 3 tokens"
-            );
-        } else {
-            revert("Invalid game type");
-        }
+        require(gameType == 1 || gameType == 2, "Invalid game type");
+        require(
+            betAmount % 3 == 0 || gameType != 2,
+            "Bet amount for gameType 2 must be a multiple of 3 tokens"
+        );
 
         uint256 payoutMultiplier = gameType == 1 ? 2 : 5;
         uint256 payoutProbability = gameType == 1 ? 9 : 25;
 
-        require(
-            getPlayerTokenBalance() >= betAmount,
-            "Insufficient token balance"
-        );
+        uint256 potentialWinTokens = betAmount * payoutMultiplier;
+        checkContractSolvency(potentialWinTokens);
 
         // Deduct the tokens to the buyer
         token.transfer(msg.sender, address(this), betAmount);
 
         uint256 result = uint256(
-            keccak256(
-                abi.encodePacked(block.timestamp, msg.sender, block.number)
-            )
+            keccak256(abi.encodePacked(block.timestamp, msg.sender))
         ) % payoutProbability;
-        uint256 WinAmount = 0;
+        uint256 winAmount = 0;
+
         if (result == 0) {
-            WinAmount = betAmount * payoutMultiplier;
+            winAmount = betAmount * payoutMultiplier;
 
-            // Réinitialisation du paiement quotidien du joueur
-            resetDailyPayout(msg.sender);
+            players[msg.sender].totalGains += winAmount;
+            players[msg.sender].biggestWin = winAmount >
+                players[msg.sender].biggestWin
+                ? winAmount
+                : players[msg.sender].biggestWin;
+            players[msg.sender].nbGamesWins++;
 
-            // Vérifie si la limite de paiement quotidien est atteinte
-            require(
-                dailyPayouts[msg.sender] + WinAmount <= MAX_DAILY_PAYOUT,
-                "Daily payout limit reached"
-            );
+            if (winAmount > biggestSingleWinEver) {
+                biggestSingleWinEver = winAmount;
+            }
 
-            // Mise à jour des gains du joueur et émission de l'événement
-            playerGains[msg.sender] += WinAmount;
-            dailyPayouts[msg.sender] += WinAmount;
-            emit PlayerWon(msg.sender, betAmount, WinAmount);
+            if (players[msg.sender].totalGains > biggestTotalWinEver) {
+                biggestTotalWinEver = players[msg.sender].totalGains;
+            }
+
+            token.transfer(address(this), msg.sender, winAmount);
+
+            emit PlayerWon(msg.sender, betAmount, winAmount);
         } else {
             emit PlayerLost(msg.sender, betAmount);
-            if (token.balanceOf(msg.sender) == 0) {
-                isAnActiveUser[msg.sender] = false;
-                emit PlayerBecameInactive(msg.sender);
-            }
         }
 
-        // Si le joueur gagne, ajoute le paiement à son solde
-        if (WinAmount > 0) {
-            if (token.balanceOf(address(this)) <= WinAmount) {
-                // Mint de nouveaux tokens si nécessaire
-                mintNewtokens(WinAmount);
-            }
-            token.transfer(address(this), msg.sender, WinAmount);
-        }
+        // Increment the number of games played by the player
+        players[msg.sender].nbGames++;
 
-        // Émission de l'événement pour le jeu joué
-        emit PlayerPlayedGame(msg.sender, gameType, betAmount);
+        emit PlayerPlayedGame(msg.sender, gameType, betAmount, winAmount);
     }
 
-    // Getter for total supply of the token
     function getTokenSupply() public view returns (uint256) {
         return token.totalSupply();
     }
 
-    // Getter for player's token balance restricted to active users or owner
     function getPlayerTokenBalance() public view returns (uint256) {
-        require(
-            isAnActiveUser[msg.sender] || msg.sender == owner(),
-            "Only active users or the owner can view the balance"
-        );
         return token.balanceOf(msg.sender);
     }
 
-    // Getter for player's gains restricted to active users or owner
     function getPlayerGains(address player) public view returns (uint256) {
+        return players[player].totalGains;
+    }
+
+    function getPlayerBiggestWin(address player) public view returns (uint256) {
+        return players[player].biggestWin;
+    }
+
+    function getPlayerGames(address player) public view returns (uint256) {
+        return players[player].nbGames;
+    }
+
+    function getPlayerGamesWins(address player) public view returns (uint256) {
+        return players[player].nbGamesWins;
+    }
+
+    function checkContractSolvency(uint256 _potentialWinTokens) internal view {
         require(
-            isAnActiveUser[msg.sender] || msg.sender == owner(),
-            "Only active users or the owner can view the gains"
+            address(this).balance >= convertTokens(_potentialWinTokens),
+            "Contract cannot pay potential win"
         );
-        return playerGains[player];
     }
 
-    // Function to check if a player is active
-    function isActiveUser(address player) public view returns (bool) {
-        return isAnActiveUser[player];
-    }
-
-    // Owner can withdraw ETH from the contract
     function withdrawEth(uint256 amount) public onlyOwner nonReentrant {
         require(address(this).balance >= amount, "Not enough ETH in reserve");
-        (bool success, ) = msg.sender.call{value: amount}("");
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
         require(success, "Transfer failed");
     }
 
-    // Fallback function to reject any Ether sent with data
     fallback() external payable {
         revert("Fallback function does not accept calls with data");
     }
 
-    // Receive function to handle plain Ether transfers
     receive() external payable {
         revert("Contract does not accept plain Ether transfers");
     }
