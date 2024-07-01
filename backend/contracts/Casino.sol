@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 contract Casino is Ownable, ReentrancyGuard {
     CasinoToken private token;
     address public tokenAddress;
-    uint256 private constant TOKEN_PRICE = 0.0003 ether;
+    uint256 private constant TOKEN_PRICE = 0.00003 ether;
 
     struct Player {
         uint256 totalGains; // Total gains accumulated by the player
@@ -37,6 +37,7 @@ contract Casino is Ownable, ReentrancyGuard {
     event PlayerLost(address indexed player, uint256 betAmount);
     event PlayerWithdrewTokens(address indexed player, uint256 amount);
     event PlayerBecameInactive(address indexed player);
+    event PlayerGetBackEthers(address indexed player, uint256 amount);
 
     constructor() Ownable(msg.sender) {
         token = new CasinoToken("CasinoToken", "CTK");
@@ -50,17 +51,25 @@ contract Casino is Ownable, ReentrancyGuard {
 
     // Buy tokens by sending ETH
     function buyTokens(uint256 _numTokens) public payable nonReentrant {
+        require(_numTokens >= 10, "You can not buy less than 10 tokens");
         require(
-            msg.value >= TOKEN_PRICE,
-            "You can't send less than 0.0003 ETH"
+            msg.value >= TOKEN_PRICE * 10,
+            "You can't send less than 0.0003 ETH, you can not buy less than 10 tokens"
         );
         require(
             msg.value >= convertTokens(_numTokens),
             "You need more eth for this quantity of tokens"
         );
+        // Check if the contract has enough tokens for the purchase
         require(
-            token.balanceOf(address(this)) >= convertTokens(_numTokens),
-            "Not enough tokens in the contract"
+            token.balanceOf(address(this)) >= _numTokens,
+            "Not enough tokens available for purchase"
+        );
+        // Check if the buyer would own more than 5% of the total supply
+        require(
+            token.balanceOf(msg.sender) + _numTokens <=
+                ((token.totalSupply() * 5) / 100),
+            "You cannot own more than 5% of the total supply"
         );
 
         uint256 tokensToBuy = convertTokens(msg.value);
@@ -92,7 +101,13 @@ contract Casino is Ownable, ReentrancyGuard {
         emit PlayerWithdrewTokens(msg.sender, _numTokens);
 
         // Interactions: Transfer ethers to the user
-        payable(msg.sender).transfer(convertTokens(_numTokens));
+        // payable(msg.sender).transfer(convertTokens(_numTokens));
+        (bool successSendEth, ) = msg.sender.call{
+            value: convertTokens(_numTokens)
+        }("");
+        require(successSendEth, "Failed to send ethers");
+
+        emit PlayerGetBackEthers(msg.sender, convertTokens(_numTokens));
 
         if (token.balanceOf(msg.sender) == 0) {
             emit PlayerBecameInactive(msg.sender);
@@ -115,11 +130,11 @@ contract Casino is Ownable, ReentrancyGuard {
             "Bet amount for gameType 2 must be a multiple of 3 tokens"
         );
 
-        uint256 payoutMultiplier = gameType == 1 ? 2 : 5;
+        uint256 payoutMultiplier = gameType == 1 ? 10 : 50;
         uint256 payoutProbability = gameType == 1 ? 9 : 25;
 
         uint256 potentialWinTokens = betAmount * payoutMultiplier;
-        checkContractSolvency(potentialWinTokens);
+        checkContractSolvency(potentialWinTokens, msg.sender);
 
         // Deduct the tokens to the buyer
         token.transfer(msg.sender, address(this), betAmount);
@@ -184,16 +199,38 @@ contract Casino is Ownable, ReentrancyGuard {
         return players[player].nbGamesWins;
     }
 
-    function checkContractSolvency(uint256 _potentialWinTokens) internal view {
+    function checkContractSolvency(
+        uint256 _potentialWinTokens,
+        address _playerAddress
+    ) internal view {
+        // Vérification que le contrat a assez de tokens pour le paiement potentiel
         require(
-            address(this).balance >= convertTokens(_potentialWinTokens),
-            "Contract cannot pay potential win"
+            token.balanceOf(address(this)) >= _potentialWinTokens,
+            "Contract cannot pay potential win in tokens"
+        );
+
+        // Récupération de la balance en tokens du joueur
+        uint256 playerBalanceTokens = token.balanceOf(_playerAddress);
+
+        // Calcul du coût en ether du paiement potentiel en tokens
+        uint256 potentialWinEthCost = convertTokens(_potentialWinTokens) +
+            convertTokens(playerBalanceTokens);
+
+        // Vérification que le contrat a assez d'ether pour couvrir le paiement potentiel
+        require(
+            address(this).balance >= potentialWinEthCost,
+            "Contract cannot pay potential win in Ether"
         );
     }
 
     function withdrawEth(uint256 amount) public onlyOwner nonReentrant {
-        require(address(this).balance >= amount, "Not enough ETH in reserve");
-        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(
+            address(this).balance >= amount * 1 ether,
+            "Not enough ETH in reserve"
+        );
+        (bool success, ) = payable(msg.sender).call{value: amount * 1 ether}(
+            ""
+        );
         require(success, "Transfer failed");
     }
 
