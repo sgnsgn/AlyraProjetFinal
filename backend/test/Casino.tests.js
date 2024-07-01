@@ -39,6 +39,10 @@ describe("Casino contract testing", function () {
       expect(await casino.owner()).to.not.equal(user1.address);
     });
 
+    it("Should have initial token supply minted", async function () {
+      expect(await casino.getTokenSupply()).to.equal(1000000);
+    });
+
     it("Should have TOKEN_PRICE set correctly", async function () {
       expect(await casino.getTokenPrice()).to.equal(TOKEN_PRICE);
     });

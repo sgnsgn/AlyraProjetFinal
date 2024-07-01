@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract Casino is Ownable, ReentrancyGuard {
     CasinoToken private token;
-    // address public tokenAddress;
     uint256 private constant TOKEN_PRICE = 0.00003 ether;
+    // address public tokenAddress;
 
     struct Player {
         uint256 totalGains; // Total gains accumulated by the player
@@ -41,10 +41,11 @@ contract Casino is Ownable, ReentrancyGuard {
 
     constructor() Ownable(msg.sender) {
         token = new CasinoToken("CasinoToken", "CTK");
-        // tokenAddress = address(token);
         token.mint(1000000);
+        // tokenAddress = address(token);
     }
 
+    // Get the price of tokens (real interest except for tests ..?)
     function getTokenPrice() public pure returns (uint256) {
         return TOKEN_PRICE;
     }
