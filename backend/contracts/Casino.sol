@@ -3,7 +3,7 @@ pragma solidity 0.8.24;
 
 import "./CasinoToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract Casino is Ownable, ReentrancyGuard {
     CasinoToken private token;
