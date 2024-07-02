@@ -2,27 +2,16 @@
 pragma solidity 0.8.24;
 
 interface IERC20 {
-    // Returns the total supply of tokens.
     function totalSupply() external view returns (uint256);
-
-    // Returns the amount of tokens owned by an `account`.
     function balanceOf(address account) external view returns (uint256);
-
-    /* Performs a transfer of tokens to a recipient.
-    Returns a boolean value indicating whether the operation was successful.
-    Emits a {Transfer} event. */
     function transfer(
         address from,
         address to,
         uint256 amount
     ) external returns (bool);
-
-    /* Emitted when a transfer of tokens occurs.
-    Note that `value` may be zero. */
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// ERC20 Token Smart Contract
 contract CasinoToken is IERC20 {
     // Data structures
     mapping(address => uint256) private _balances;
@@ -41,9 +30,6 @@ contract CasinoToken is IERC20 {
         _;
     }
 
-    /* Sets the name and symbol of the token.
-    The default value of {decimals} is 18. To select a different value for
-    {decimals}, we must replace it. */
     constructor(string memory name_, string memory symbol_) {
         _name = name_;
         _symbol = symbol_;
@@ -60,12 +46,6 @@ contract CasinoToken is IERC20 {
         return _symbol;
     }
 
-    /* Returns the number of decimals used to get its user representation.
-    For example, if `decimals` is equal to `2`, a balance of `505` tokens should
-    be shown to the user as `5.05` (`505 / 10 ** 2`).
-    Tokens usually opt for a value of 18, mimicking the relationship between
-    Ether and Wei. This is the value used by {ERC20}, unless this function is
-    overridden. */
     function decimals() public view virtual returns (uint8) {
         return 0;
     }
