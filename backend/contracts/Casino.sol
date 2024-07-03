@@ -40,8 +40,8 @@ contract Casino is Ownable, ReentrancyGuard {
     event PlayerGetBackEthers(address indexed player, uint256 amount);
 
     constructor() Ownable(msg.sender) {
-        token = new CasinoToken("CasinoToken", "CTK");
-        token.mint(1000000);
+        token = new CasinoToken(address(this));
+        token.mint(address(this), 1000000);
         tokenAddress = address(token);
     }
 
@@ -78,7 +78,7 @@ contract Casino is Ownable, ReentrancyGuard {
         //     token.mint(_numTokens * 100000);
         // }
 
-        token.transfer(address(this), msg.sender, _numTokens);
+        token.transfer(msg.sender, _numTokens);
 
         emit PlayerBoughtTokens(msg.sender, tokensToBuy);
     }
@@ -95,7 +95,7 @@ contract Casino is Ownable, ReentrancyGuard {
         );
 
         // Effects: Transfer tokens to the Smart Contract
-        token.transfer(msg.sender, address(this), _numTokens);
+        token.transferFrom(msg.sender, address(this), _numTokens);
 
         // Effects: Emit event for token withdrawal
         emit PlayerWithdrewTokens(msg.sender, _numTokens);
@@ -134,7 +134,7 @@ contract Casino is Ownable, ReentrancyGuard {
         checkContractSolvency(potentialWinTokens, msg.sender);
 
         // Deduct the tokens to the buyer
-        token.transfer(msg.sender, address(this), betAmount);
+        token.transferFrom(msg.sender, address(this), betAmount);
 
         uint256 result = uint256(
             keccak256(abi.encodePacked(block.timestamp, msg.sender))
@@ -159,7 +159,7 @@ contract Casino is Ownable, ReentrancyGuard {
                 biggestTotalWinEver = players[msg.sender].totalGains;
             }
 
-            token.transfer(address(this), msg.sender, winAmount);
+            token.transfer(msg.sender, winAmount);
 
             emit PlayerWon(msg.sender, betAmount, winAmount);
         } else {

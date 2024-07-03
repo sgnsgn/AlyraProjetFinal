@@ -122,6 +122,16 @@ describe("Casino contract testing", function () {
       expect(await token.balanceOf(user1.address)).to.equal(30000);
     });
 
+    it("Should revert if the amount is less than the price of 10 tokens", async function () {
+      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+      const etherGiven = ethers.parseEther("0.00003");
+      await expect(
+        casino.connect(user1).buyTokens(10, { value: etherGiven })
+      ).to.be.revertedWith(
+        "You can't send less than 0.0003 ETH, you can not buy less than 10 tokens"
+      );
+    });
+
     it("Should revert if less than 10 tokens are bought", async function () {
       const { casino, user1 } = await loadFixture(deployCasinoFixture);
       const etherGiven = ethers.parseEther("1");
@@ -303,6 +313,19 @@ describe("Casino contract testing", function () {
       await expect(casino.withdrawEth(1)).to.be.revertedWith(
         "Not enough ETH in reserve"
       );
+    });
+  });
+
+  describe.skip("Fallback function", function () {
+    it("Should revert when called with data", async function () {
+      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+
+      await expect(
+        user1.sendTransaction({
+          to: casino.address,
+          data: "0x1234", // Sending some arbitrary data
+        })
+      ).to.be.revertedWith("Contract does not accept Ether transfers");
     });
   });
 });
