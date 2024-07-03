@@ -199,49 +199,72 @@ describe("Casino contract testing", function () {
     });
   });
 
-  describe.skip("Playing games", function () {
-    beforeEach(async function () {
-      // Ensure user1 buys some tokens first
-      await casino
-        .connect(user1)
-        .buyTokens(100, { value: TOKEN_PRICE.mul(100) });
-    });
-
+  describe("Playing games", function () {
     it("Should play game type 1 and win", async function () {
-      // Ensure the contract has enough tokens to pay potential win
-      await token.mint(1000);
-      await casino.connect(owner).transfer(token.address, 1000);
+      const { casino, token, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
 
-      await expect(casino.connect(user1).playGame(1, 3))
-        .to.emit(casino, "PlayerPlayedGame")
-        .withArgs(user1.address, 1, 3, 0);
+      const initialBalance = await token.balanceOf(user1.address);
+      await casino.connect(user1).playGame(1, 3);
+      const finalBalance = await token.balanceOf(user1.address);
 
-      const player = await casino.players(user1.address);
-      expect(player.nbGames).to.equal(1);
+      expect(finalBalance).to.be.greaterThan(initialBalance);
     });
 
     it("Should revert if bet amount is zero", async function () {
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
       await expect(casino.connect(user1).playGame(1, 0)).to.be.revertedWith(
         "Bet amount must be greater than zero"
       );
     });
 
     it("Should revert if bet amount is more than player's balance", async function () {
-      await expect(casino.connect(user1).playGame(1, 200)).to.be.revertedWith(
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      await expect(casino.connect(user1).playGame(1, 40000)).to.be.revertedWith(
         "Insufficient tokens balance"
       );
     });
 
     it("Should revert if game type is invalid", async function () {
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
       await expect(casino.connect(user1).playGame(3, 3)).to.be.revertedWith(
         "Invalid game type"
       );
     });
 
     it("Should revert if bet amount for game type 2 is not a multiple of 3", async function () {
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
       await expect(casino.connect(user1).playGame(2, 4)).to.be.revertedWith(
         "Bet amount for gameType 2 must be a multiple of 3 tokens"
       );
+    });
+
+    it("Should emit PlayerPlayedGame when player plays a game", async function () {
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+
+      await expect(casino.connect(user1).playGame(1, 3))
+        .to.emit(casino, "PlayerPlayedGame")
+        .withArgs(user1.address, 1, 3, 0);
+    });
+
+    it("Should update the number of games played when player plays a game", async function () {
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      await casino.connect(user1).playGame(1, 3);
+      const player = await casino.players(user1.address);
+      expect(player.nbGames).to.equal(1);
     });
   });
 

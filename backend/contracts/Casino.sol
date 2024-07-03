@@ -172,30 +172,6 @@ contract Casino is Ownable, ReentrancyGuard {
         emit PlayerPlayedGame(msg.sender, gameType, betAmount, winAmount);
     }
 
-    function getTokenSupply() public view returns (uint256) {
-        return token.totalSupply();
-    }
-
-    function getPlayerTokenBalance() public view returns (uint256) {
-        return token.balanceOf(msg.sender);
-    }
-
-    function getPlayerGains(address player) public view returns (uint256) {
-        return players[player].totalGains;
-    }
-
-    function getPlayerBiggestWin(address player) public view returns (uint256) {
-        return players[player].biggestWin;
-    }
-
-    function getPlayerGames(address player) public view returns (uint256) {
-        return players[player].nbGames;
-    }
-
-    function getPlayerGamesWins(address player) public view returns (uint256) {
-        return players[player].nbGamesWins;
-    }
-
     function checkContractSolvency(
         uint256 _potentialWinTokens,
         address _playerAddress
