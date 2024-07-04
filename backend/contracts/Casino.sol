@@ -93,6 +93,10 @@ contract Casino is Ownable, ReentrancyGuard {
             _numTokens <= token.balanceOf(msg.sender),
             "Insufficient token balance"
         );
+        require(
+            token.allowance(msg.sender, address(this)) >= _numTokens,
+            "Allowance not set or insufficient"
+        );
 
         // Effects: Transfer tokens to the Smart Contract
         token.transferFrom(msg.sender, address(this), _numTokens);
@@ -125,6 +129,10 @@ contract Casino is Ownable, ReentrancyGuard {
         require(
             betAmount % 3 == 0 || gameType != 2,
             "Bet amount for gameType 2 must be a multiple of 3 tokens"
+        );
+        require(
+            token.allowance(msg.sender, address(this)) >= betAmount,
+            "Allowance not set or insufficient"
         );
 
         uint256 payoutMultiplier = gameType == 1 ? 10 : 50;
