@@ -22,7 +22,7 @@ describe("Casino contract testing", function () {
 
   async function deployCasinoAndBuyTokensFixture() {
     // Contracts are deployed using the first signer/account by default
-    const [owner, user1] = await ethers.getSigners();
+    const [owner, user1, user2] = await ethers.getSigners();
     const Casino = await ethers.getContractFactory("Casino");
     const casino = await Casino.deploy();
 
@@ -35,12 +35,16 @@ describe("Casino contract testing", function () {
     await casino
       .connect(user1)
       .buyTokens(numberOfTokens, { value: etherGiven });
+    await casino
+      .connect(user2)
+      .buyTokens(numberOfTokens, { value: etherGiven });
 
     return {
       casino,
       token,
       owner,
       user1,
+      user2,
       etherGiven,
       numberOfTokens,
     };
@@ -260,7 +264,7 @@ describe("Casino contract testing", function () {
   });
 
   describe("Playing games", function () {
-    it("Should play game type 1 and lose", async function () {
+    it("Should play game type 1 and lose tokens", async function () {
       const { casino, token, user1 } = await loadFixture(
         deployCasinoAndBuyTokensFixture
       );
@@ -272,6 +276,96 @@ describe("Casino contract testing", function () {
       const finalBalance = await token.balanceOf(user1.address);
 
       expect(finalBalance).to.be.lessThan(initialBalance);
+    });
+
+    it("Should play game type 1 and check the event for loss", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      const betAmount = 3;
+
+      await token.connect(user1).approve(casino, betAmount);
+
+      await expect(casino.connect(user1).playGame(1, betAmount))
+        .to.emit(casino, "PlayerLost")
+        .withArgs(user1.address, betAmount);
+    });
+
+    it("Should play game type 1 multiple times and check the event for win", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      const betAmount = 3;
+
+      await token.connect(user1).approve(casino, betAmount * 20); // Approve enough tokens for multiple plays
+
+      let won = false;
+      for (let i = 0; i < 20; i++) {
+        const tx = casino.connect(user1).playGame(1, betAmount);
+        try {
+          await expect(tx)
+            .to.emit(casino, "PlayerWon")
+            .withArgs(user1.address, betAmount, betAmount * 10);
+          won = true;
+          break;
+        } catch (error) {
+          // Ignore the error and continue the loop if the event is not emitted
+        }
+      }
+
+      expect(won).to.be.true;
+    });
+
+    it("Should play game type 2 and lose tokens", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      const betAmount = 3;
+
+      await token.connect(user1).approve(casino, betAmount);
+      const initialBalance = await token.balanceOf(user1.address);
+      await casino.connect(user1).playGame(2, betAmount);
+      const finalBalance = await token.balanceOf(user1.address);
+
+      expect(finalBalance).to.be.lessThan(initialBalance);
+    });
+
+    it("Should play game type 2 and check the event for loss", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      const betAmount = 6;
+
+      await token.connect(user1).approve(casino, betAmount);
+
+      await expect(casino.connect(user1).playGame(2, betAmount))
+        .to.emit(casino, "PlayerLost")
+        .withArgs(user1.address, betAmount);
+    });
+
+    it("Should play game type 2 multiple times and check the event for win", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      const betAmount = 3;
+
+      await token.connect(user1).approve(casino, betAmount * 100); // Approve enough tokens for multiple plays
+
+      let won = false;
+      for (let i = 0; i < 100; i++) {
+        const tx = casino.connect(user1).playGame(2, betAmount);
+        try {
+          await expect(tx)
+            .to.emit(casino, "PlayerWon")
+            .withArgs(user1.address, betAmount, betAmount * 50);
+          won = true;
+          break;
+        } catch (error) {
+          // Ignore the error and continue the loop if the event is not emitted
+        }
+      }
+
+      expect(won).to.be.true;
     });
 
     it("Should revert if bet amount is zero", async function () {
@@ -330,6 +424,175 @@ describe("Casino contract testing", function () {
       const player = await casino.players(user1.address);
       expect(player.nbGames).to.equal(1);
     });
+
+    it("Should update player variables and global variables on win", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      const betAmount = 3;
+      const payoutMultiplier = 10;
+      const winAmount = betAmount * payoutMultiplier;
+
+      await token.connect(user1).approve(casino, betAmount * 20); // Approve enough tokens for multiple plays
+
+      let won = false;
+      for (let i = 0; i < 20; i++) {
+        const tx = casino.connect(user1).playGame(1, betAmount);
+        try {
+          await expect(tx)
+            .to.emit(casino, "PlayerWon")
+            .withArgs(user1.address, betAmount, winAmount);
+          won = true;
+          break;
+        } catch (error) {
+          // Ignore the error and continue the loop if the event is not emitted
+        }
+      }
+
+      expect(won).to.be.true;
+
+      // Check player variables
+      const player = await casino.players(user1.address);
+      expect(player.totalGains).to.equal(winAmount);
+      expect(player.biggestWin).to.equal(winAmount);
+      expect(player.nbGamesWins).to.equal(1);
+
+      // Check global variables
+      expect(await casino.biggestSingleWinEver()).to.equal(winAmount);
+      expect(await casino.biggestTotalWinEver()).to.equal(winAmount);
+    });
+
+    it("Should update biggestTotalWinEver when a new player surpasses previous totalGains", async function () {
+      const { casino, token, user1, user2 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      const betAmount = 3;
+      const payoutMultiplierGame1 = 10;
+      const payoutMultiplierGame2 = 50;
+      const winAmountGame1 = betAmount * payoutMultiplierGame1;
+      const winAmountGame2 = betAmount * payoutMultiplierGame2;
+
+      // Simulate a win for the player 1
+      await token.connect(user1).approve(casino, betAmount * 20);
+      let user1Won = false;
+      for (let i = 0; i < 20; i++) {
+        const tx = casino.connect(user1).playGame(1, betAmount);
+        try {
+          await expect(tx)
+            .to.emit(casino, "PlayerWon")
+            .withArgs(user1.address, betAmount, winAmountGame1);
+          user1Won = true;
+          break;
+        } catch (error) {
+          // Ignore the error and continue the loop if the event is not emitted
+        }
+      }
+
+      expect(user1Won).to.be.true;
+
+      // Check global variables after player 1's win
+      const player1AfterWin = await casino.players(user1.address);
+      expect(await casino.biggestTotalWinEver()).to.equal(
+        player1AfterWin.totalGains
+      );
+      expect(await casino.biggestSingleWinEver()).to.equal(winAmountGame1);
+
+      // Simulate a win for the player 2
+      await token.connect(user2).approve(casino, betAmount * 50);
+      let user2Won = false;
+      for (let i = 0; i < 50; i++) {
+        const tx = casino.connect(user2).playGame(2, betAmount);
+        try {
+          await expect(tx)
+            .to.emit(casino, "PlayerWon")
+            .withArgs(user2.address, betAmount, winAmountGame2);
+          user2Won = true;
+          break;
+        } catch (error) {
+          // Ignore the error and continue the loop if the event is not emitted
+        }
+      }
+
+      expect(user2Won).to.be.true;
+
+      // Check global variables after player 2's win
+      const player1 = await casino.players(user1.address);
+      const player2 = await casino.players(user2.address);
+      expect(player2.totalGains).to.be.greaterThan(player1.totalGains);
+      expect(await casino.biggestTotalWinEver()).to.equal(player2.totalGains);
+      expect(await casino.biggestSingleWinEver()).to.equal(winAmountGame2);
+    });
+
+    it("Should update player1 and global variables after multiple wins", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      const betAmount1 = 3;
+      const betAmount2 = 5;
+      const payoutMultiplier = 10;
+      const winAmount1 = betAmount1 * payoutMultiplier;
+      const winAmount2 = betAmount2 * payoutMultiplier;
+
+      // Approve enough tokens for multiple plays for user1
+      await token.connect(user1).approve(casino, betAmount1 * 20);
+
+      // Simulate a win for player 1 in game type 1
+      let user1WonGame1 = false;
+      for (let i = 0; i < 20; i++) {
+        const tx = casino.connect(user1).playGame(1, betAmount1);
+        try {
+          await expect(tx)
+            .to.emit(casino, "PlayerWon")
+            .withArgs(user1.address, betAmount1, winAmount1);
+          user1WonGame1 = true;
+          break;
+        } catch (error) {
+          // Ignore the error and continue the loop if the event is not emitted
+        }
+      }
+
+      expect(user1WonGame1).to.be.true;
+
+      // Check player and global variables after first win
+      const player1AfterFirstWin = await casino.players(user1.address);
+      expect(player1AfterFirstWin.totalGains).to.equal(winAmount1);
+      expect(player1AfterFirstWin.biggestWin).to.equal(winAmount1);
+      expect(player1AfterFirstWin.nbGamesWins).to.equal(1);
+      expect(await casino.biggestTotalWinEver()).to.equal(winAmount1);
+      expect(await casino.biggestSingleWinEver()).to.equal(winAmount1);
+
+      // Approve enough tokens for another win for user1
+      await token.connect(user1).approve(casino, betAmount2 * 20);
+
+      // Simulate another win for player 1 in game type 1 with a different bet amount
+      let user1WonGame2 = false;
+      for (let i = 0; i < 20; i++) {
+        const tx = casino.connect(user1).playGame(1, betAmount2);
+        try {
+          await expect(tx)
+            .to.emit(casino, "PlayerWon")
+            .withArgs(user1.address, betAmount2, winAmount2);
+          user1WonGame2 = true;
+          break;
+        } catch (error) {
+          // Ignore the error and continue the loop if the event is not emitted
+        }
+      }
+
+      expect(user1WonGame2).to.be.true;
+
+      // Check player and global variables after second win
+      const player1AfterSecondWin = await casino.players(user1.address);
+      expect(player1AfterSecondWin.totalGains).to.equal(
+        winAmount1 + winAmount2
+      );
+      expect(player1AfterSecondWin.biggestWin).to.equal(winAmount2);
+      expect(player1AfterSecondWin.nbGamesWins).to.equal(2);
+      expect(await casino.biggestTotalWinEver()).to.equal(
+        winAmount1 + winAmount2
+      );
+      expect(await casino.biggestSingleWinEver()).to.equal(winAmount2);
+    });
   });
 
   describe("Solvency check", function () {
@@ -378,26 +641,35 @@ describe("Casino contract testing", function () {
     });
   });
 
-  describe.skip("Fallback function", function () {
-    it("Should revert when called with data", async function () {
-      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+  // describe.skip("Fallback function", function () {
+  //   it("Should revert when called with data", async function () {
+  //     const { casino, user1 } = await loadFixture(deployCasinoFixture);
 
-      await expect(
-        user1.sendTransaction({
-          to: casino.address,
-          data: "0x1234", // Sending some arbitrary data
-        })
-      ).to.be.revertedWith("Contract does not accept Ether transfers");
-    });
-  });
+  //     await expect(
+  //       user1.sendTransaction({
+  //         to: casino.address,
+  //         data: "0x1234", // Sending some arbitrary data
+  //       })
+  //     ).to.be.revertedWith("Contract does not accept Ether transfers");
+  //   });
+  // });
+
   describe("Mint function", function () {
     it("Should revert when a non authorized user tries to mint", async function () {
       const { token, user1 } = await loadFixture(deployCasinoFixture);
       await expect(token.connect(user1).mint(user1, 10000000)).to.be.reverted;
     });
   });
-  // await owner.sendTransaction({
-  //   to: casino,
-  //   value: ethers.parseEther("1.0"),
-  // });
+  describe("Receive function", function () {
+    it("Should revert when Ether is sent directly to the contract", async function () {
+      const { casino, owner } = await loadFixture(deployCasinoFixture);
+
+      await expect(
+        owner.sendTransaction({
+          to: casino,
+          value: ethers.parseEther("1.0"),
+        })
+      ).to.be.revertedWith("Contract does not accept plain Ether transfers");
+    });
+  });
 });
