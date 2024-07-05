@@ -353,19 +353,25 @@ describe("Casino contract testing", function () {
     });
   });
 
-  describe.skip("Withdraw ETH", function () {
+  describe("Withdraw ETH", function () {
     it("Should allow owner to withdraw ETH", async function () {
-      await owner.sendTransaction({
-        to: casino.address,
-        value: ethers.utils.parseEther("1.0"),
-      });
-      await expect(casino.withdrawEth(1)).to.changeEtherBalance(
-        owner,
-        ethers.utils.parseEther("1.0")
+      const { casino, owner } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
       );
+      await expect(casino.connect(owner).withdrawEth(1)).to.changeEtherBalance(
+        owner,
+        ethers.parseEther("1.0")
+      );
+    });
+    it("Should revert when non authorized user tries to to withdraw ETH", async function () {
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      await expect(casino.connect(user1).withdrawEth(1)).to.be.reverted;
     });
 
     it("Should revert if not enough ETH in reserve", async function () {
+      const { casino } = await loadFixture(deployCasinoFixture);
       await expect(casino.withdrawEth(1)).to.be.revertedWith(
         "Not enough ETH in reserve"
       );
@@ -384,4 +390,14 @@ describe("Casino contract testing", function () {
       ).to.be.revertedWith("Contract does not accept Ether transfers");
     });
   });
+  describe("Mint function", function () {
+    it("Should revert when a non authorized user tries to mint", async function () {
+      const { token, user1 } = await loadFixture(deployCasinoFixture);
+      await expect(token.connect(user1).mint(user1, 10000000)).to.be.reverted;
+    });
+  });
+  // await owner.sendTransaction({
+  //   to: casino,
+  //   value: ethers.parseEther("1.0"),
+  // });
 });
