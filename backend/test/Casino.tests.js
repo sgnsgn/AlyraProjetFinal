@@ -672,6 +672,4 @@ describe("Casino contract testing", function () {
       ).to.be.revertedWith("Contract does not accept plain Ether transfers");
     });
   });
-
-  describe("Playing games and updating variables", function () {});
 });
