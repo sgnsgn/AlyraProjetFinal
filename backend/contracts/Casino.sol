@@ -40,8 +40,8 @@ contract Casino is Ownable, ReentrancyGuard {
     event PlayerGetBackEthers(address indexed player, uint256 amount);
 
     constructor() Ownable(msg.sender) {
-        token = new CasinoToken("CasinoToken", "CTK");
-        token.mint(1000000);
+        token = new CasinoToken(address(this));
+        token.mint(address(this), 1000000);
         tokenAddress = address(token);
     }
 
@@ -78,7 +78,7 @@ contract Casino is Ownable, ReentrancyGuard {
         //     token.mint(_numTokens * 100000);
         // }
 
-        token.transfer(address(this), msg.sender, _numTokens);
+        token.transfer(msg.sender, _numTokens);
 
         emit PlayerBoughtTokens(msg.sender, tokensToBuy);
     }
@@ -93,9 +93,13 @@ contract Casino is Ownable, ReentrancyGuard {
             _numTokens <= token.balanceOf(msg.sender),
             "Insufficient token balance"
         );
+        require(
+            token.allowance(msg.sender, address(this)) >= _numTokens,
+            "Allowance not set or insufficient"
+        );
 
         // Effects: Transfer tokens to the Smart Contract
-        token.transfer(msg.sender, address(this), _numTokens);
+        token.transferFrom(msg.sender, address(this), _numTokens);
 
         // Effects: Emit event for token withdrawal
         emit PlayerWithdrewTokens(msg.sender, _numTokens);
@@ -126,6 +130,10 @@ contract Casino is Ownable, ReentrancyGuard {
             betAmount % 3 == 0 || gameType != 2,
             "Bet amount for gameType 2 must be a multiple of 3 tokens"
         );
+        require(
+            token.allowance(msg.sender, address(this)) >= betAmount,
+            "Allowance not set or insufficient"
+        );
 
         uint256 payoutMultiplier = gameType == 1 ? 10 : 50;
         uint256 payoutProbability = gameType == 1 ? 9 : 25;
@@ -134,7 +142,7 @@ contract Casino is Ownable, ReentrancyGuard {
         checkContractSolvency(potentialWinTokens, msg.sender);
 
         // Deduct the tokens to the buyer
-        token.transfer(msg.sender, address(this), betAmount);
+        token.transferFrom(msg.sender, address(this), betAmount);
 
         uint256 result = uint256(
             keccak256(abi.encodePacked(block.timestamp, msg.sender))
@@ -159,7 +167,7 @@ contract Casino is Ownable, ReentrancyGuard {
                 biggestTotalWinEver = players[msg.sender].totalGains;
             }
 
-            token.transfer(address(this), msg.sender, winAmount);
+            token.transfer(msg.sender, winAmount);
 
             emit PlayerWon(msg.sender, betAmount, winAmount);
         } else {
@@ -170,30 +178,6 @@ contract Casino is Ownable, ReentrancyGuard {
         players[msg.sender].nbGames++;
 
         emit PlayerPlayedGame(msg.sender, gameType, betAmount, winAmount);
-    }
-
-    function getTokenSupply() public view returns (uint256) {
-        return token.totalSupply();
-    }
-
-    function getPlayerTokenBalance() public view returns (uint256) {
-        return token.balanceOf(msg.sender);
-    }
-
-    function getPlayerGains(address player) public view returns (uint256) {
-        return players[player].totalGains;
-    }
-
-    function getPlayerBiggestWin(address player) public view returns (uint256) {
-        return players[player].biggestWin;
-    }
-
-    function getPlayerGames(address player) public view returns (uint256) {
-        return players[player].nbGames;
-    }
-
-    function getPlayerGamesWins(address player) public view returns (uint256) {
-        return players[player].nbGamesWins;
     }
 
     function checkContractSolvency(

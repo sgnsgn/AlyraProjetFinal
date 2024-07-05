@@ -122,6 +122,16 @@ describe("Casino contract testing", function () {
       expect(await token.balanceOf(user1.address)).to.equal(30000);
     });
 
+    it("Should revert if the amount is less than the price of 10 tokens", async function () {
+      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+      const etherGiven = ethers.parseEther("0.00003");
+      await expect(
+        casino.connect(user1).buyTokens(10, { value: etherGiven })
+      ).to.be.revertedWith(
+        "You can't send less than 0.0003 ETH, you can not buy less than 10 tokens"
+      );
+    });
+
     it("Should revert if less than 10 tokens are bought", async function () {
       const { casino, user1 } = await loadFixture(deployCasinoFixture);
       const etherGiven = ethers.parseEther("1");
@@ -146,6 +156,35 @@ describe("Casino contract testing", function () {
       ).to.be.revertedWith("Not enough tokens available for purchase");
     });
 
+    it("Should revert if allowance is not set", async function () {
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      await expect(casino.connect(user1).playGame(1, 10)).to.be.revertedWith(
+        "Allowance not set or insufficient"
+      );
+    });
+
+    it("Should revert if allowance is less than the bet amount", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      await token.connect(user1).approve(casino, 5);
+      await expect(casino.connect(user1).playGame(1, 10)).to.be.revertedWith(
+        "Allowance not set or insufficient"
+      );
+    });
+
+    it("Should play game if allowance is sufficient", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      await token.connect(user1).approve(casino, 10);
+      await expect(casino.connect(user1).playGame(1, 10))
+        .to.emit(casino, "PlayerPlayedGame")
+        .withArgs(user1.address, 1, 10, 0);
+    });
+
     it("Should revert if the supply after the purchase is greater than 5%", async function () {
       const { casino, user1 } = await loadFixture(deployCasinoFixture);
       const etherGiven = ethers.parseEther("2");
@@ -156,10 +195,11 @@ describe("Casino contract testing", function () {
   });
 
   describe("Returning tokens", function () {
-    it("Should return tokens and check that player balance have been updated", async function () {
+    it("Should return tokens if allowance is sufficient", async function () {
       const { casino, token, user1, numberOfTokens } = await loadFixture(
         deployCasinoAndBuyTokensFixture
       );
+      await token.connect(user1).approve(casino, 10);
       await expect(casino.connect(user1).devolverTokens(10))
         .to.emit(casino, "PlayerWithdrewTokens")
         .withArgs(user1.address, 10);
@@ -191,95 +231,173 @@ describe("Casino contract testing", function () {
       const { casino, token, user1 } = await loadFixture(
         deployCasinoAndBuyTokensFixture
       );
+      await token.connect(user1).approve(casino, 30000);
       await expect(casino.connect(user1).devolverTokens(30000))
         .to.emit(casino, "PlayerBecameInactive")
         .withArgs(user1.address);
 
       expect(await token.balanceOf(user1.address)).to.equal(0);
     });
-  });
 
-  describe.skip("Playing games", function () {
-    beforeEach(async function () {
-      // Ensure user1 buys some tokens first
-      await casino
-        .connect(user1)
-        .buyTokens(100, { value: TOKEN_PRICE.mul(100) });
+    it("Should revert if allowance is not set", async function () {
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      await expect(casino.connect(user1).devolverTokens(10)).to.be.revertedWith(
+        "Allowance not set or insufficient"
+      );
     });
 
-    it("Should play game type 1 and win", async function () {
-      // Ensure the contract has enough tokens to pay potential win
-      await token.mint(1000);
-      await casino.connect(owner).transfer(token.address, 1000);
+    it("Should revert if allowance is less than the number of tokens to be returned", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      await token.connect(user1).approve(casino, 5);
+      await expect(casino.connect(user1).devolverTokens(10)).to.be.revertedWith(
+        "Allowance not set or insufficient"
+      );
+    });
+  });
 
-      await expect(casino.connect(user1).playGame(1, 3))
-        .to.emit(casino, "PlayerPlayedGame")
-        .withArgs(user1.address, 1, 3, 0);
+  describe("Playing games", function () {
+    it("Should play game type 1 and lose", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      const betAmount = 3;
 
-      const player = await casino.players(user1.address);
-      expect(player.nbGames).to.equal(1);
+      await token.connect(user1).approve(casino, betAmount);
+      const initialBalance = await token.balanceOf(user1.address);
+      await casino.connect(user1).playGame(1, betAmount);
+      const finalBalance = await token.balanceOf(user1.address);
+
+      expect(finalBalance).to.be.lessThan(initialBalance);
     });
 
     it("Should revert if bet amount is zero", async function () {
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
       await expect(casino.connect(user1).playGame(1, 0)).to.be.revertedWith(
         "Bet amount must be greater than zero"
       );
     });
 
     it("Should revert if bet amount is more than player's balance", async function () {
-      await expect(casino.connect(user1).playGame(1, 200)).to.be.revertedWith(
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      await expect(casino.connect(user1).playGame(1, 40000)).to.be.revertedWith(
         "Insufficient tokens balance"
       );
     });
 
     it("Should revert if game type is invalid", async function () {
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
       await expect(casino.connect(user1).playGame(3, 3)).to.be.revertedWith(
         "Invalid game type"
       );
     });
 
     it("Should revert if bet amount for game type 2 is not a multiple of 3", async function () {
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
       await expect(casino.connect(user1).playGame(2, 4)).to.be.revertedWith(
         "Bet amount for gameType 2 must be a multiple of 3 tokens"
       );
+    });
+
+    it("Should emit PlayerPlayedGame when player plays a game", async function () {
+      const { casino, user1, token } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+
+      await token.connect(user1).approve(casino, 3);
+      await expect(casino.connect(user1).playGame(1, 3))
+        .to.emit(casino, "PlayerPlayedGame")
+        .withArgs(user1.address, 1, 3, 0);
+    });
+
+    it("Should update the number of games played when player plays a game", async function () {
+      const { casino, user1, token } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      await token.connect(user1).approve(casino, 3);
+      await casino.connect(user1).playGame(1, 3);
+      const player = await casino.players(user1.address);
+      expect(player.nbGames).to.equal(1);
     });
   });
 
   describe("Solvency check", function () {
     it("Should revert if contract cannot pay potential win in tokens", async function () {
-      const { casino, user1 } = await loadFixture(
+      const { casino, user1, token } = await loadFixture(
         deployCasinoAndBuyTokensFixture
       );
+      await token.connect(user1).approve(casino, 30000);
       await expect(casino.connect(user1).playGame(2, 30000)).to.be.revertedWith(
         "Contract cannot pay potential win in tokens"
       );
     });
     it("Should revert if contract cannot pay potential win in Ether", async function () {
-      const { casino, user1 } = await loadFixture(
+      const { casino, user1, token } = await loadFixture(
         deployCasinoAndBuyTokensFixture
       );
+      await token.connect(user1).approve(casino, 10000);
       await expect(casino.connect(user1).playGame(1, 10000)).to.be.revertedWith(
         "Contract cannot pay potential win in Ether"
       );
     });
   });
 
-  describe.skip("Withdraw ETH", function () {
+  describe("Withdraw ETH", function () {
     it("Should allow owner to withdraw ETH", async function () {
-      await owner.sendTransaction({
-        to: casino.address,
-        value: ethers.utils.parseEther("1.0"),
-      });
-      await expect(casino.withdrawEth(1)).to.changeEtherBalance(
-        owner,
-        ethers.utils.parseEther("1.0")
+      const { casino, owner } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
       );
+      await expect(casino.connect(owner).withdrawEth(1)).to.changeEtherBalance(
+        owner,
+        ethers.parseEther("1.0")
+      );
+    });
+    it("Should revert when non authorized user tries to to withdraw ETH", async function () {
+      const { casino, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+      await expect(casino.connect(user1).withdrawEth(1)).to.be.reverted;
     });
 
     it("Should revert if not enough ETH in reserve", async function () {
+      const { casino } = await loadFixture(deployCasinoFixture);
       await expect(casino.withdrawEth(1)).to.be.revertedWith(
         "Not enough ETH in reserve"
       );
     });
   });
+
+  describe.skip("Fallback function", function () {
+    it("Should revert when called with data", async function () {
+      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+
+      await expect(
+        user1.sendTransaction({
+          to: casino.address,
+          data: "0x1234", // Sending some arbitrary data
+        })
+      ).to.be.revertedWith("Contract does not accept Ether transfers");
+    });
+  });
+  describe("Mint function", function () {
+    it("Should revert when a non authorized user tries to mint", async function () {
+      const { token, user1 } = await loadFixture(deployCasinoFixture);
+      await expect(token.connect(user1).mint(user1, 10000000)).to.be.reverted;
+    });
+  });
+  // await owner.sendTransaction({
+  //   to: casino,
+  //   value: ethers.parseEther("1.0"),
+  // });
 });
