@@ -74,10 +74,6 @@ contract Casino is Ownable, ReentrancyGuard {
 
         uint256 tokensToBuy = convertTokens(msg.value);
 
-        // if (token.balanceOf(address(this)) < _numTokens) {
-        //     token.mint(_numTokens * 100000);
-        // }
-
         token.transfer(msg.sender, _numTokens);
 
         emit PlayerBoughtTokens(msg.sender, tokensToBuy);
