@@ -73,6 +73,7 @@ const DevolverTokens = ({
   useEffect(() => {
     if (isDevolverSuccess) {
       setRefresh((prev) => !prev);
+      // setNumTokens("");
     }
   }, [isDevolverSuccess, setRefresh]);
 
@@ -95,13 +96,17 @@ const DevolverTokens = ({
           ? "Processing..."
           : "Return Tokens"}
       </button>
-      {approveHash && (
+      {isApproveSuccess && (
         <div className="mt-2 text-white">
           <p>Approval Transaction Hash: {approveHash}</p>
-          {approveError && <p className="text-red-500">Error in approval</p>}
+          {approveError ? (
+            <p className="text-red-500">Error in approval transaction</p>
+          ) : (
+            <p className="text-green-500">Approval successful</p>
+          )}
         </div>
       )}
-      {devolverHash && (
+      {isDevolverSuccess && (
         <div className="mt-2 text-white">
           <p>Return Transaction Hash: {devolverHash}</p>
           {devolverError ? (

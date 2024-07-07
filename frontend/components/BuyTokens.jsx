@@ -44,6 +44,7 @@ const BuyTokens = ({ address, casinoAddress, casinoAbi, setRefresh }) => {
   useEffect(() => {
     if (isSuccess) {
       setRefresh((prev) => !prev);
+      setNumTokens("");
     }
   }, [isSuccess, setRefresh]);
 
