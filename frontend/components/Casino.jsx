@@ -6,20 +6,7 @@ import {
   contractTokenAddress,
   contractTokenAbi,
 } from "@/constants";
-/*
-useReadContract : Lire les données d'un contrat
-useWriteContract : Ecrire des données dans un contrat
-useWaitForTransactionReceipt : Attendre que la transaction soit confirmée (équivalent de transaction.wait() avec ethers)
-useWatchContractEvent : Récupérer en temps réel si un évènement a été émis
-*/
-import {
-  useChainId,
-  useReadContract,
-  useAccount,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  useWatchContractEvent,
-} from "wagmi";
+import { useChainId } from "wagmi";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import BestResults from "./BestResults";
 import Player from "./Player";
@@ -36,9 +23,9 @@ const SEPOLIA_EXPECTED_NETWORK_ID = 11155111;
 
 const Casino = ({ address }) => {
   const [isOwner, setIsOwner] = useState(false);
+  const [refresh, setRefresh] = useState(false);
 
-  const chainId = useChainId(); // Utiliser useChainId pour obtenir l'ID de la chaine
-  // Vérifier si nous sommes sur le bon réseau
+  const chainId = useChainId();
   const isOnExpectedNetwork =
     chainId === HARDHAT_EXPECTED_NETWORK_ID ||
     chainId === SEPOLIA_EXPECTED_NETWORK_ID;
@@ -78,6 +65,7 @@ const Casino = ({ address }) => {
         tokenAbi={contractTokenAbi}
         casinoAddress={contractCasinoAddress}
         casinoAbi={contractCasinoAbi}
+        refresh={refresh}
       />
       <div className="text-1xl text-center p-5 w-full flex justify-center">
         <div className="w-1/4 p-2 mr-1 border border-purple-300 rounded-xl">
@@ -87,6 +75,7 @@ const Casino = ({ address }) => {
             tokenAbi={contractTokenAbi}
             casinoAddress={contractCasinoAddress}
             casinoAbi={contractCasinoAbi}
+            setRefresh={setRefresh}
           />
         </div>
         <div className="w-1/4 p-2 ml-1 border border-purple-300 rounded-xl">
@@ -96,6 +85,7 @@ const Casino = ({ address }) => {
             tokenAbi={contractTokenAbi}
             casinoAddress={contractCasinoAddress}
             casinoAbi={contractCasinoAbi}
+            setRefresh={setRefresh}
           />
         </div>
       </div>

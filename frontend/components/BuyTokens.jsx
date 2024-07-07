@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { parseEther } from "viem";
 import { useToast } from "./ui/use-toast";
 
-const BuyTokens = ({ address, casinoAddress, casinoAbi }) => {
+const BuyTokens = ({ address, casinoAddress, casinoAbi, setRefresh }) => {
   const [numTokens, setNumTokens] = useState("");
   const { toast } = useToast();
 
@@ -22,7 +22,7 @@ const BuyTokens = ({ address, casinoAddress, casinoAbi }) => {
     setNumTokens(event.target.value);
   };
 
-  const handleClick = async () => {
+  const handleBuyTokens = () => {
     if (!isNaN(numTokens) && numTokens >= 10) {
       buyTokens({
         address: casinoAddress,
@@ -30,6 +30,7 @@ const BuyTokens = ({ address, casinoAddress, casinoAbi }) => {
         functionName: "buyTokens",
         args: [numTokens],
         value: parseEther((numTokens * 0.00003).toString()),
+        account: address,
       });
     } else {
       toast({
@@ -39,6 +40,12 @@ const BuyTokens = ({ address, casinoAddress, casinoAbi }) => {
       });
     }
   };
+
+  useEffect(() => {
+    if (isSuccess) {
+      setRefresh((prev) => !prev);
+    }
+  }, [isSuccess, setRefresh]);
 
   return (
     <div>
@@ -52,7 +59,7 @@ const BuyTokens = ({ address, casinoAddress, casinoAbi }) => {
       />
       <button
         className="bg-purple-400 border border-white rounded-lg px-4 py-2 mt-2 w-full max-w-xs"
-        onClick={handleClick}
+        onClick={handleBuyTokens}
         disabled={!numTokens || isPending || isLoading}
       >
         {isPending ? "Processing..." : "Buy Tokens"}
