@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { useWriteContract } from "wagmi";
+import { useState, useEffect } from "react";
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { parseEther } from "viem";
+import { useToast } from "./ui/use-toast";
 
 const DevolverTokens = ({
   address,
@@ -7,32 +9,72 @@ const DevolverTokens = ({
   casinoAbi,
   tokenAddress,
   tokenAbi,
+  setRefresh,
 }) => {
-  const [numTokens, setNumTokens] = useState(0);
-  const [error, setError] = useState(null);
+  const [numTokens, setNumTokens] = useState("");
+  const { toast } = useToast();
 
-  const { writeContract: approveTokens } = useWriteContract({
-    address: tokenAddress,
-    abi: tokenAbi,
-    functionName: "approve",
-    args: [casinoAddress, numTokens],
+  const {
+    data: approveHash,
+    isPending: isApprovePending,
+    writeContract: approveTokens,
+    error: approveError,
+  } = useWriteContract();
+  const {
+    data: devolverHash,
+    isPending: isDevolverPending,
+    writeContract: devolverTokens,
+    error: devolverError,
+  } = useWriteContract();
+  const { isSuccess: isApproveSuccess } = useWaitForTransactionReceipt({
+    hash: approveHash,
+  });
+  const { isSuccess: isDevolverSuccess } = useWaitForTransactionReceipt({
+    hash: devolverHash,
   });
 
-  const { writeContract: devolverTokens } = useWriteContract({
-    address: casinoAddress,
-    abi: casinoAbi,
-    functionName: "devolverTokens",
-    args: [numTokens],
-  });
-
-  const handleApproveAndReturnTokens = async () => {
-    try {
-      await approveTokens();
-      await devolverTokens();
-    } catch (err) {
-      setError(err.message);
+  const handleApproveAndReturnTokens = () => {
+    if (!isNaN(numTokens) && numTokens > 0) {
+      approveTokens({
+        address: tokenAddress,
+        abi: tokenAbi,
+        functionName: "approve",
+        args: [casinoAddress, numTokens],
+        account: address,
+      });
+    } else {
+      toast({
+        title: "An error occurred",
+        description: "Please enter a valid number",
+        className: "bg-red-500",
+      });
     }
   };
+
+  useEffect(() => {
+    if (isApproveSuccess) {
+      devolverTokens({
+        address: casinoAddress,
+        abi: casinoAbi,
+        functionName: "devolverTokens",
+        args: [numTokens],
+        account: address,
+      });
+    }
+  }, [
+    isApproveSuccess,
+    numTokens,
+    casinoAddress,
+    casinoAbi,
+    address,
+    devolverTokens,
+  ]);
+
+  useEffect(() => {
+    if (isDevolverSuccess) {
+      setRefresh((prev) => !prev);
+    }
+  }, [isDevolverSuccess, setRefresh]);
 
   return (
     <div>
@@ -47,10 +89,28 @@ const DevolverTokens = ({
       <button
         className="bg-purple-400 border border-white rounded-lg px-4 py-2 mt-2 w-full max-w-xs"
         onClick={handleApproveAndReturnTokens}
+        disabled={!numTokens || isApprovePending || isDevolverPending}
       >
-        Return Tokens
+        {isApprovePending || isDevolverPending
+          ? "Processing..."
+          : "Return Tokens"}
       </button>
-      {error && <div className="text-red-500 mt-2">Error: {error}</div>}
+      {approveHash && (
+        <div className="mt-2 text-white">
+          <p>Approval Transaction Hash: {approveHash}</p>
+          {approveError && <p className="text-red-500">Error in approval</p>}
+        </div>
+      )}
+      {devolverHash && (
+        <div className="mt-2 text-white">
+          <p>Return Transaction Hash: {devolverHash}</p>
+          {devolverError ? (
+            <p className="text-red-500">Error in return transaction</p>
+          ) : (
+            <p className="text-green-500">Return transaction successful</p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
