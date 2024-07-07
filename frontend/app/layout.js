@@ -3,7 +3,7 @@ import CustomRainbowKitProvider from "./CustomRainbowKitProvider.jsx";
 import "./globals.css";
 import { Inter as FontSans } from "next/font/google";
 
-// import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/toaster";
 
 import { cn } from "@/lib/utils";
 
@@ -30,7 +30,7 @@ export default function RootLayout({ children }) {
         <CustomRainbowKitProvider>
           <Layout>{children}</Layout>
         </CustomRainbowKitProvider>
-        {/* <Toaster /> */}
+        {<Toaster />}
       </body>
     </html>
   );
