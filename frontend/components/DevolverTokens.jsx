@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { parseEther } from "viem";
 import { useToast } from "./ui/use-toast";
 
 const DevolverTokens = ({
@@ -26,12 +25,14 @@ const DevolverTokens = ({
     writeContract: devolverTokens,
     error: devolverError,
   } = useWriteContract();
-  const { isSuccess: isApproveSuccess } = useWaitForTransactionReceipt({
-    hash: approveHash,
-  });
-  const { isSuccess: isDevolverSuccess } = useWaitForTransactionReceipt({
-    hash: devolverHash,
-  });
+  const { isSuccess: isApproveSuccess, isLoading: isApproveLoading } =
+    useWaitForTransactionReceipt({
+      hash: approveHash,
+    });
+  const { isSuccess: isDevolverSuccess, isLoading: isDevolverLoading } =
+    useWaitForTransactionReceipt({
+      hash: devolverHash,
+    });
 
   const handleApproveAndReturnTokens = () => {
     if (!isNaN(numTokens) && numTokens > 0) {
@@ -73,7 +74,7 @@ const DevolverTokens = ({
   useEffect(() => {
     if (isDevolverSuccess) {
       setRefresh((prev) => !prev);
-      // setNumTokens("");
+      setNumTokens("");
     }
   }, [isDevolverSuccess, setRefresh]);
 

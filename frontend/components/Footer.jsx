@@ -2,7 +2,7 @@ const Footer = () => {
   return (
     <div className="flex justify-center items-center w-full p-8">
       <p>
-        Alyra Turing Final Project &copy; | by Ackichn, Dan & Nicolas |{" "}
+        Alyra Turing Final Project &copy; | by Akichn, Dan & Nicolas |{" "}
         {new Date().getFullYear()}
       </p>
     </div>

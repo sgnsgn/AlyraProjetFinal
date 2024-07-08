@@ -5,6 +5,11 @@ const motifs = ["🍒", "🔔", "🍋"];
 
 const getRandomNumber = () => Math.floor(Math.random() * 9);
 
+const getRandomSymbolExcept = (except) => {
+  const filteredMotifs = motifs.filter((motif) => motif !== except);
+  return filteredMotifs[Math.floor(Math.random() * filteredMotifs.length)];
+};
+
 const SlotMachine = () => {
   const [reel1, setReel1] = useState("🍒");
   const [reel2, setReel2] = useState("🔔");
@@ -29,26 +34,17 @@ const SlotMachine = () => {
         setReel3(winningSymbol);
         setWinning(true);
         setResultMessage(
-          `Résultat gagnant: ${result}, Symboles: ${winningSymbol}-${winningSymbol}-${winningSymbol}`
+          `Winning result: ${result}, Symbols: ${winningSymbol}-${winningSymbol}-${winningSymbol}`
         );
       } else {
-        let randomSymbols = [];
-        do {
-          randomSymbols = [
-            motifs[Math.floor(Math.random() * motifs.length)],
-            motifs[Math.floor(Math.random() * motifs.length)],
-            motifs[Math.floor(Math.random() * motifs.length)],
-          ];
-        } while (
-          randomSymbols[0] === randomSymbols[1] &&
-          randomSymbols[1] === randomSymbols[2]
-        );
-
-        setReel1(randomSymbols[0]);
-        setReel2(randomSymbols[1]);
-        setReel3(randomSymbols[2]);
+        const firstSymbol = motifs[Math.floor(Math.random() * motifs.length)];
+        const secondSymbol = getRandomSymbolExcept(firstSymbol);
+        const thirdSymbol = getRandomSymbolExcept(firstSymbol);
+        setReel1(firstSymbol);
+        setReel2(secondSymbol);
+        setReel3(thirdSymbol);
         setResultMessage(
-          `Résultat perdant: ${result}, Symboles: ${randomSymbols[0]}-${randomSymbols[1]}-${randomSymbols[2]}`
+          `Losing result: ${result}, Symbols: ${firstSymbol}-${secondSymbol}-${thirdSymbol}`
         );
       }
 
@@ -71,7 +67,7 @@ const SlotMachine = () => {
 
   return (
     <div style={{ textAlign: "center", padding: "50px" }}>
-      <div className="text-2xl mb-4">Slot Machine</div>
+      <div className="text-2xl mb-4"></div>
       <div className="slot-machine">
         <div className={`reel ${spinning ? "spinning" : ""}`}>{reel1}</div>
         <div className={`reel ${spinning ? "spinning" : ""}`}>{reel2}</div>
