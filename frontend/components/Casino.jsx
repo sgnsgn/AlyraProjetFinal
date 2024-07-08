@@ -12,6 +12,8 @@ import BestResults from "./BestResults";
 import Player from "./Player";
 import BuyTokens from "./BuyTokens";
 import DevolverTokens from "./DevolverTokens";
+import Game1 from "./Game1";
+import Game2 from "./Game2";
 import SlotMachine from "./SlotMachine";
 // Permet de parser l'event
 //import { parseAbiItem } from "viem";
@@ -80,6 +82,28 @@ const Casino = ({ address }) => {
         </div>
         <div className="w-1/4 p-2 ml-1 border border-purple-300 rounded-xl">
           <DevolverTokens
+            address={address}
+            tokenAddress={contractTokenAddress}
+            tokenAbi={contractTokenAbi}
+            casinoAddress={contractCasinoAddress}
+            casinoAbi={contractCasinoAbi}
+            setRefresh={setRefresh}
+          />
+        </div>
+      </div>
+      <div className="text-1xl text-center p-5 w-full flex justify-center p-2 mb-5 border border-purple-300 rounded-xl">
+        <div>
+          <Game1
+            address={address}
+            tokenAddress={contractTokenAddress}
+            tokenAbi={contractTokenAbi}
+            casinoAddress={contractCasinoAddress}
+            casinoAbi={contractCasinoAbi}
+            setRefresh={setRefresh}
+          />
+        </div>
+        <div>
+          <Game2
             address={address}
             tokenAddress={contractTokenAddress}
             tokenAbi={contractTokenAbi}
