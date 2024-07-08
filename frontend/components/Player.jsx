@@ -1,5 +1,5 @@
 import { useReadContract } from "wagmi";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 const Player = ({
   address,
@@ -22,14 +22,6 @@ const Player = ({
     functionName: "balanceOf",
     args: [address],
   });
-
-  // const [player, setPlayer] = useState(null);
-
-  // useEffect(() => {
-  //   if (playerData) {
-  //     setPlayer(playerData);
-  //   }
-  // }, [playerData]);
 
   useEffect(() => {
     refetchPlayerData();

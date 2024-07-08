@@ -15,42 +15,37 @@ const Game1 = ({
   setRefresh,
 }) => {
   const [betAmount, setBetAmount] = useState("");
-  const { toast } = useToast();
   const [approveSuccess, setApproveSuccess] = useState(false);
+  const { toast } = useToast();
 
-  const handlePlayerWon = () => {
-    toast({
-      title: "Transaction successful",
-      description: "You have won the game.",
-      className: "bg-green-500",
-    });
-  };
+  // PlayerWon(msg.sender, betAmount, winAmount);
+  // PlayerLost(msg.sender, betAmount);
+  // PlayerPlayedGame(msg.sender, gameType, betAmount, winAmount);
 
-  const handlePlayerLost = () => {
-    toast({
-      title: "Transaction successful",
-      description: "You have lost the game.",
-      className: "bg-red-500",
-    });
-  };
-
-  useWatchContractEvent({
+  const onPlayerWon = useWatchContractEvent({
     address: casinoAddress,
     abi: casinoAbi,
     eventName: "PlayerWon",
-    listener: (event) => {
-      console.log("PlayerWon event detected: ", event);
-      handlePlayerWon();
+    onLogs(logs) {
+      console.log("New logs!", logs);
     },
   });
 
-  useWatchContractEvent({
+  const onPlayerLost = useWatchContractEvent({
     address: casinoAddress,
     abi: casinoAbi,
     eventName: "PlayerLost",
-    listener: (event) => {
-      console.log("PlayerLost event detected: ", event);
-      handlePlayerLost();
+    onLogs(logs) {
+      console.log("New logs!", logs);
+    },
+  });
+
+  const onPlayerPlayed = useWatchContractEvent({
+    address: casinoAddress,
+    abi: casinoAbi,
+    eventName: "PlayerPlayedGame",
+    onLogs(logs) {
+      console.log("New logs!", logs);
     },
   });
 
@@ -102,7 +97,6 @@ const Game1 = ({
     if (approveSuccess) {
       console.log("Playing game...");
       console.log("betAmount: ", betAmount);
-      // const betAmountBN = formatEther(betAmount);
       try {
         playGame({
           address: casinoAddress,
@@ -111,6 +105,9 @@ const Game1 = ({
           args: [1, betAmount],
           account: address,
         });
+        onPlayerLost;
+        onPlayerWon;
+        onPlayerPlayed;
       } catch (error) {
         console.error("Error in playGame:", error);
         toast({
@@ -148,7 +145,7 @@ const Game1 = ({
 
   return (
     <div>
-      <h2 className="text-2xl text-purple-400">Game 1</h2>
+      <h2 className="text-2xl text-purple-400 mb-2">Game 1</h2>
       <input
         className="text-black w-full max-w-xs border border-gray-300 rounded-lg px-4 py-2 mb-2"
         type="number"
@@ -157,18 +154,24 @@ const Game1 = ({
         placeholder="Enter bet amount"
       />
       <button
-        className="bg-purple-400 border border-white rounded-lg px-4 py-2 mt-2 w-full max-w-xs"
+        className={`bg-purple-400 border border-white rounded-lg px-4 py-2 w-full max-w-xs ${
+          isApproveLoading ? "opacity-50 cursor-not-allowed" : ""
+        }`}
         onClick={handleApprove}
-        disabled={!betAmount || isApprovePending}
+        disabled={!betAmount || isApproveLoading}
       >
-        {isApprovePending ? "Processing..." : "Approve"}
+        {isApproveLoading ? "Processing..." : "Approve"}
       </button>
       <button
-        className="bg-purple-400 border border-white rounded-lg px-4 py-2 mt-2 w-full max-w-xs"
+        className={`bg-purple-400 border border-white rounded-lg px-4 py-2 mt-2 w-full max-w-xs ${
+          !approveSuccess || isPlayLoading
+            ? "opacity-50 cursor-not-allowed"
+            : ""
+        }`}
         onClick={handlePlayGame}
-        disabled={!approveSuccess || isPlayPending}
+        disabled={!approveSuccess || isPlayLoading}
       >
-        {isPlayPending ? "Processing..." : "Play Game"}
+        {isPlayLoading ? "Processing..." : "Play Game"}
       </button>
       {isApproveSuccess && (
         <div className="mt-2 text-white">
