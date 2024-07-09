@@ -26,8 +26,10 @@ const Casino = ({ address }) => {
   const [isOwner, setIsOwner] = useState(false);
   const [refresh, setRefresh] = useState(false);
   const [events, setEvents] = useState([]);
-
+  const [result, setResult] = useState(null);
+  const [spinning, setSpinning] = useState(false);
   const chainId = useChainId();
+
   const isOnExpectedNetwork =
     chainId === HARDHAT_EXPECTED_NETWORK_ID ||
     chainId === SEPOLIA_EXPECTED_NETWORK_ID;
@@ -255,27 +257,33 @@ const Casino = ({ address }) => {
       </div>
       <div className="text-1xl text-center p-5 w-full flex justify-center p-2 mb-5 border border-purple-300 rounded-xl bg-gray-500">
         <div className="w-1/2 p-2 mr-1 border border-purple-300 rounded-xl bg-black p-5">
-          <Game1
-            address={address}
-            tokenAddress={contractTokenAddress}
-            tokenAbi={contractTokenAbi}
-            casinoAddress={contractCasinoAddress}
-            casinoAbi={contractCasinoAbi}
-            setRefresh={setRefresh}
-          />
           <div>
-            <SlotMachine />
+            <Game1
+              address={address}
+              tokenAddress={contractTokenAddress}
+              tokenAbi={contractTokenAbi}
+              casinoAddress={contractCasinoAddress}
+              casinoAbi={contractCasinoAbi}
+              setRefresh={setRefresh}
+              setSpinning={setSpinning}
+              setResult={setResult}
+            />
+          </div>
+          <div>
+            <SlotMachine spinning={spinning} result={result} />
           </div>
         </div>
         <div className="w-1/2 p-2 mr-1 border border-purple-300 rounded-xl p-5">
-          <Game2
+          {/* <Game2
             address={address}
             tokenAddress={contractTokenAddress}
             tokenAbi={contractTokenAbi}
             casinoAddress={contractCasinoAddress}
             casinoAbi={contractCasinoAbi}
             setRefresh={setRefresh}
-          />
+            setSpinning={setSpinning}
+            setResult={setResult}
+          /> */}
         </div>
       </div>
       {/* <div>{isOwner && <Events events={events} />}</div> */}

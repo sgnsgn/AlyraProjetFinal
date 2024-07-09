@@ -13,41 +13,12 @@ const Game1 = ({
   tokenAddress,
   tokenAbi,
   setRefresh,
+  setSpinning,
+  setResult,
 }) => {
   const [betAmount, setBetAmount] = useState("");
   const [approveSuccess, setApproveSuccess] = useState(false);
   const { toast } = useToast();
-
-  // PlayerWon(msg.sender, betAmount, winAmount);
-  // PlayerLost(msg.sender, betAmount);
-  // PlayerPlayedGame(msg.sender, gameType, betAmount, winAmount);
-
-  const onPlayerWon = useWatchContractEvent({
-    address: casinoAddress,
-    abi: casinoAbi,
-    eventName: "PlayerWon",
-    onLogs(logs) {
-      console.log("New logs!", logs);
-    },
-  });
-
-  const onPlayerLost = useWatchContractEvent({
-    address: casinoAddress,
-    abi: casinoAbi,
-    eventName: "PlayerLost",
-    onLogs(logs) {
-      console.log("New logs!", logs);
-    },
-  });
-
-  const onPlayerPlayed = useWatchContractEvent({
-    address: casinoAddress,
-    abi: casinoAbi,
-    eventName: "PlayerPlayedGame",
-    onLogs(logs) {
-      console.log("New logs!", logs);
-    },
-  });
 
   const {
     data: approveHash,
@@ -57,7 +28,7 @@ const Game1 = ({
   } = useWriteContract();
 
   const {
-    data: playHash,
+    data: playGameHash,
     isPending: isPlayPending,
     writeContract: playGame,
     error: playError,
@@ -70,8 +41,39 @@ const Game1 = ({
 
   const { isSuccess: isPlaySuccess, isLoading: isPlayLoading } =
     useWaitForTransactionReceipt({
-      hash: playHash,
+      hash: playGameHash,
     });
+
+  useWatchContractEvent({
+    address: casinoAddress,
+    abi: casinoAbi,
+    eventName: "PlayerWon",
+    onLogs(logs) {
+      console.log("New PlayerWon logs!", logs);
+      setResult({ won: true, logs });
+      setSpinning(false);
+    },
+  });
+
+  useWatchContractEvent({
+    address: casinoAddress,
+    abi: casinoAbi,
+    eventName: "PlayerLost",
+    onLogs(logs) {
+      console.log("New PlayerLost logs!", logs);
+      setResult({ won: false, logs });
+      setSpinning(false);
+    },
+  });
+
+  useWatchContractEvent({
+    address: casinoAddress,
+    abi: casinoAbi,
+    eventName: "PlayerPlayedGame",
+    onLogs(logs) {
+      console.log("New PlayerPlayedGame logs!", logs);
+    },
+  });
 
   const handleApprove = async () => {
     if (!isNaN(betAmount) && betAmount > 0) {
@@ -98,6 +100,8 @@ const Game1 = ({
       console.log("Playing game...");
       console.log("betAmount: ", betAmount);
       try {
+        setSpinning(true);
+        setResult(null);
         playGame({
           address: casinoAddress,
           abi: casinoAbi,
@@ -105,9 +109,6 @@ const Game1 = ({
           args: [1, betAmount],
           account: address,
         });
-        onPlayerLost;
-        onPlayerWon;
-        onPlayerPlayed;
       } catch (error) {
         console.error("Error in playGame:", error);
         toast({
@@ -180,7 +181,7 @@ const Game1 = ({
       )}
       {isPlaySuccess && (
         <div className="mt-2 text-white">
-          <p>Play Transaction Hash: {playHash}</p>
+          <p>Play Transaction Hash: {playGameHash}</p>
           {playError ? (
             <p className="text-red-500">
               Error in play transaction: {playError.message}
