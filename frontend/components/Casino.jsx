@@ -209,8 +209,8 @@ const Casino = ({ address }) => {
   }
 
   return (
-    <div className="text-1xl text-center p-1">
-      <div className="p-2 mb-5 border border-purple-300 rounded-xl">
+    <div className="w-3/4 text-center items-center mx-auto">
+      <div className="p-2 mb-5 border border-purple-300 rounded-xl bg-black">
         <div>
           Welcone on board to you :{" "}
           <span className="text-purple-400">{address}</span>
@@ -233,8 +233,8 @@ const Casino = ({ address }) => {
         casinoAbi={contractCasinoAbi}
         refresh={refresh}
       />
-      <div className="text-1xl text-center p-5 w-full flex justify-center">
-        <div className="w-1/4 p-2 mr-1 border border-purple-300 rounded-xl">
+      <div className="text-1xl text-center mb-3 w-full flex justify-center">
+        <div className="w-1/3 p-2 mr-1 border border-purple-300 rounded-xl bg-black">
           <BuyTokens
             address={address}
             tokenAddress={contractTokenAddress}
@@ -244,7 +244,7 @@ const Casino = ({ address }) => {
             setRefresh={setRefresh}
           />
         </div>
-        <div className="w-1/4 p-2 ml-1 border border-purple-300 rounded-xl">
+        <div className="w-1/3 p-2 ml-1 border border-purple-300 rounded-xl bg-black">
           <DevolverTokens
             address={address}
             tokenAddress={contractTokenAddress}
@@ -255,8 +255,8 @@ const Casino = ({ address }) => {
           />
         </div>
       </div>
-      <div className="text-1xl text-center p-5 w-full flex justify-center p-2 mb-5 border border-purple-300 rounded-xl bg-gray-500">
-        <div className="w-1/2 p-2 mr-1 border border-purple-300 rounded-xl bg-black p-5">
+      <div className="text-1xl text-center w-full flex justify-center p-2 mb-5">
+        <div className="w-1/2 p-2 mr-1 border border-purple-300 rounded-xl p-5 bg-black">
           <div>
             <Game1
               address={address}
@@ -274,7 +274,7 @@ const Casino = ({ address }) => {
           </div>
           <p className="text-gray-400 italic">*1/9 chance of winning</p>
         </div>
-        <div className="w-1/2 p-2 mr-1 border border-purple-300 rounded-xl p-5">
+        <div className="w-1/2 p-2 ml-1 border border-purple-300 rounded-xl p-5 bg-black">
           {/* <Game2
             address={address}
             tokenAddress={contractTokenAddress}

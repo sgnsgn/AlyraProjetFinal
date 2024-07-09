@@ -22,7 +22,7 @@ const BestResults = ({ casinoAddress, casinoAbi, refresh }) => {
   }, [refresh]);
 
   return (
-    <div className="text-1xl text-center w-full p-2 mb-5 border border-purple-300 rounded-xl">
+    <div className="text-1xl text-center w-full p-2 mb-5 border border-purple-300 rounded-xl bg-black">
       <h2 className="text-2xl text-purple-400">Best Results</h2>
       <div>
         <strong>Biggest Single Win Ever:</strong>{" "}

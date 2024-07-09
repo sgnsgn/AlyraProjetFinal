@@ -151,7 +151,7 @@ const Game1 = ({
       <p className="text-lg text-gray-400 mb-4">3 rolls, 3 patterns</p>
       <p className="text-3xl text-yellow-400 mb-7 blink">Win multiplier x 7</p>
       <input
-        className="text-black w-full max-w-xs border border-gray-300 rounded-lg px-4 py-2 mb-2 mr-2"
+        className="text-black w-full max-w-xs border border-gray-300 rounded-lg px-4 py-2 mb-2"
         type="number"
         value={betAmount}
         onChange={(e) => setBetAmount(e.target.value)}

@@ -14,16 +14,20 @@ const fontSans = FontSans({
 
 export const metadata = {
   title: "Alyra Project Final",
-  description: "Project Final of Turing Promotion by Akhichn, Dan & Nicolas",
+  description: "Project Final of Turing Promotion by Akichn, Dan & Nicolas",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className="h-full w-full bg-[#1a1b1f]"
+    >
       <head />
       <body
         className={cn(
-          "min-h-screen bg-background font-sans antialiased dark",
+          "min-h-screen bg-[#1a1b1f] font-sans antialiased dark",
           fontSans.variable
         )}
       >

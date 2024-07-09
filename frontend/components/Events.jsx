@@ -42,37 +42,39 @@ const eventTypes = {
 
 const Events = ({ events }) => {
   return (
-    <>
+    <div className="text-center items-center mx-auto border border-purple-300 rounded-xl bg-black">
       <h2 className="text-4xl font-extrabold mt-4">Events</h2>
-      <Table className="mt-4">
+      <Table className="mt-4 mx-auto">
         <TableCaption>List of the different events</TableCaption>
         <TableHeader>
-          <TableRow>
-            <TableHead className="w-1/2 items-center justify-center">
-              Type
-            </TableHead>
-            <TableHead>Args</TableHead>
-            <TableHead>Block Number</TableHead>
+          <TableRow className="text-center">
+            <TableHead className="w-1/3 text-center">Type</TableHead>
+            <TableHead className="w-1/3 text-center">Args</TableHead>
+            <TableHead className="w-1/3 text-center">Block Number</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {events.map((event) => {
             const eventType = eventTypes[event.type] || eventTypes.default;
             return (
-              <TableRow key={crypto.randomUUID()}>
-                <TableCell className="font-medium">
+              <TableRow key={crypto.randomUUID()} className="text-center">
+                <TableCell className="font-medium text-center">
                   <Badge className={eventType.className}>
                     {eventType.text}
                   </Badge>
                 </TableCell>
-                <TableCell>{JSON.stringify(event.args)}</TableCell>
-                <TableCell>{event.blockNumber}</TableCell>
+                <TableCell className="text-center">
+                  {JSON.stringify(event.args)}
+                </TableCell>
+                <TableCell className="text-center">
+                  {event.blockNumber}
+                </TableCell>
               </TableRow>
             );
           })}
         </TableBody>
       </Table>
-    </>
+    </div>
   );
 };
 
