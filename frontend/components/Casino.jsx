@@ -272,6 +272,7 @@ const Casino = ({ address }) => {
           <div>
             <SlotMachine spinning={spinning} result={result} />
           </div>
+          <p className="text-gray-400 italic">*1/9 chance of winning</p>
         </div>
         <div className="w-1/2 p-2 mr-1 border border-purple-300 rounded-xl p-5">
           {/* <Game2
