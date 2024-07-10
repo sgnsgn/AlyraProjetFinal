@@ -292,10 +292,7 @@ const Casino = ({ address }) => {
           <p className="text-gray-400 italic">*1/25 chance of winning</p>
         </div>
       </div>
-      {/* <div>{isOwner && <Events events={events} />}</div> */}
-      <div>
-        <Events events={events} />
-      </div>
+      <div>{isOwner && <Events events={events} />}</div>
     </div>
   );
 };
