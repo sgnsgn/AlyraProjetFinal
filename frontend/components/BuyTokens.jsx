@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { parseEther } from "viem";
 import { useToast } from "./ui/use-toast";
+import ToastManager from "./ToastManager";
 
 const BuyTokens = ({ address, casinoAddress, casinoAbi, setRefresh }) => {
   const [numTokens, setNumTokens] = useState("");
@@ -50,7 +51,18 @@ const BuyTokens = ({ address, casinoAddress, casinoAbi, setRefresh }) => {
 
   return (
     <div>
-      <h2 className="text-2xl text-purple-400 mb-2">Buy Tokens</h2>
+      <ToastManager
+        hash={hash}
+        isPending={isPending}
+        isLoading={isLoading}
+        isSuccess={isSuccess}
+        error={error}
+        alertDescription={"Buy Tokens"}
+      />
+      <h2 className="text-3xl font-extrabold text-purple-400 mb-2">
+        Buy Tokens{" "}
+        <span className="text-gray-400 text-lg">(min 10 tokens)</span>
+      </h2>
       <input
         className="text-black w-full max-w-xs border border-gray-300 rounded-lg px-4 py-2 mb-2"
         type="number"
@@ -59,23 +71,12 @@ const BuyTokens = ({ address, casinoAddress, casinoAbi, setRefresh }) => {
         placeholder="Enter number of tokens"
       />
       <button
-        className="bg-purple-400 border border-white rounded-lg px-4 py-2 mt-2 w-full max-w-xs"
+        className="bg-purple-400 border border-white rounded-lg px-4 py-2 mx-2 w-full max-w-xs"
         onClick={handleBuyTokens}
         disabled={!numTokens || isPending || isLoading}
       >
-        {isPending ? "Processing..." : "Buy Tokens"}
+        {isPending ? "Processing..." : "Get $NADC"}
       </button>
-      {error && <p className="text-red-500">{error.message}</p>}
-      {isLoading ? (
-        <p className="text-orange-500">Transaction is Loading...</p>
-      ) : (
-        isSuccess && (
-          <div className="mt-2 text-white">
-            <p>Transaction Hash: {hash}</p>
-            <p className="text-green-500">Transaction successful</p>
-          </div>
-        )
-      )}
     </div>
   );
 };
