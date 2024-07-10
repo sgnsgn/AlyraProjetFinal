@@ -61,7 +61,7 @@ const SlotMachine = ({ spinning, result }) => {
       <div style={{ marginTop: "20px", fontSize: "1.2em" }}>
         {resultMessage}
       </div>
-      {result.won && <div>Congratulations! You won!</div>}
+      {winning && <div>Congratulations! You won!</div>}
     </div>
   );
 };
