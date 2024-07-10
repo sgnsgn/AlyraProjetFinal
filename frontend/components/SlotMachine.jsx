@@ -32,9 +32,7 @@ const SlotMachine = ({ spinning, result }) => {
         setReel2(winningSymbol);
         setReel3(winningSymbol);
         setWinning(true);
-        setResultMessage(
-          `Winning result, Symbols: ${winningSymbol}-${winningSymbol}-${winningSymbol}`
-        );
+        setResultMessage("Congratulations! You won!");
       } else {
         const firstSymbol = motifs[Math.floor(Math.random() * motifs.length)];
         const secondSymbol = getRandomSymbolExcept(firstSymbol);
@@ -42,9 +40,7 @@ const SlotMachine = ({ spinning, result }) => {
         setReel1(firstSymbol);
         setReel2(secondSymbol);
         setReel3(thirdSymbol);
-        setResultMessage(
-          `Losing result, Symbols: ${firstSymbol}-${secondSymbol}-${thirdSymbol}`
-        );
+        setResultMessage("You lose, try again ;)");
       }
     }
     return () => clearInterval(interval);
@@ -61,7 +57,6 @@ const SlotMachine = ({ spinning, result }) => {
       <div style={{ marginTop: "20px", fontSize: "1.2em" }}>
         {resultMessage}
       </div>
-      {winning && <div>Congratulations! You won!</div>}
     </div>
   );
 };

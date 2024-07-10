@@ -1,11 +1,20 @@
-import { useState, useEffect } from "react";
+// On importe les éléments de Wagmi qui vont nous permettre de :
+/*
+useReadContract : Lire les données d'un contrat
+useAccount : Récupérer les données d'un compte connecté à la DApp via RainbowKit
+useWriteContract : Ecrire des données dans un contrat
+useWaitForTransactionReceipt : Attendre que la transaction soit confirmée (équivalent de transaction.wait() avec ethers)
+useWatchContractEvent : Récupérer en temps réel si un évènement a été émis
+*/
+
+import React, { useState, useEffect } from "react";
 import {
   useWriteContract,
   useWaitForTransactionReceipt,
   useWatchContractEvent,
 } from "wagmi";
 import { useToast } from "./ui/use-toast";
-import "../app/blink.css";
+import ToastManager from "./ToastManager";
 
 const Game1 = ({
   address,
@@ -67,15 +76,6 @@ const Game1 = ({
     },
   });
 
-  useWatchContractEvent({
-    address: casinoAddress,
-    abi: casinoAbi,
-    eventName: "PlayerPlayedGame",
-    onLogs(logs) {
-      console.log("New PlayerPlayedGame logs!", logs);
-    },
-  });
-
   const handleApprove = async () => {
     if (!isNaN(betAmount) && betAmount > 0) {
       console.log("Approving tokens...");
@@ -117,6 +117,7 @@ const Game1 = ({
           description: error.message,
           className: "bg-red-500",
         });
+        setSpinning(false);
       }
     } else {
       toast({
@@ -133,13 +134,14 @@ const Game1 = ({
       toast({
         title: "Approval successful",
         description: "You can now play the game",
-        className: "bg-green-500",
+        className: "bg-[#0E0C09]",
       });
     }
   }, [isApproveSuccess, toast]);
 
   useEffect(() => {
     if (isPlaySuccess) {
+      setApproveSuccess(false);
       setRefresh((prev) => !prev);
       setBetAmount("");
     }
@@ -147,9 +149,29 @@ const Game1 = ({
 
   return (
     <div>
-      <h2 className="text-4xl text-purple-400 mb-1">SPIN THE GAME ONE</h2>
+      <ToastManager
+        hash={approveHash}
+        isPending={isApprovePending}
+        isLoading={isApproveLoading}
+        isSuccess={isApproveSuccess}
+        error={approveError}
+        alertDescription="Approve Tokens"
+      />
+      <ToastManager
+        hash={playGameHash}
+        isPending={isPlayPending}
+        isLoading={isPlayLoading}
+        isSuccess={isPlaySuccess}
+        error={playError}
+        alertDescription="Play Game"
+      />
+      <h2 className="text-4xl text-purple-400 mb-1 font-extrabold">
+        SPIN THE GAME ONE
+      </h2>
       <p className="text-lg text-gray-400 mb-4">3 rolls, 3 patterns</p>
-      <p className="text-3xl text-yellow-400 mb-7 blink">Win multiplier x 7</p>
+      <p className="text-3xl text-yellow-400 mb-7 blink font-extrabold">
+        Win multiplier x 7
+      </p>
       <input
         className="text-black w-full max-w-xs border border-gray-300 rounded-lg px-4 py-2 mb-2"
         type="number"
@@ -159,10 +181,12 @@ const Game1 = ({
       />
       <button
         className={`bg-purple-400 border border-white rounded-lg px-4 py-2 w-full max-w-xs ${
-          isApproveLoading ? "opacity-50 cursor-not-allowed" : ""
+          isApproveLoading || !betAmount || approveSuccess
+            ? "opacity-50 cursor-not-allowed"
+            : ""
         }`}
         onClick={handleApprove}
-        disabled={!betAmount || isApproveLoading}
+        disabled={!betAmount || isApproveLoading || approveSuccess}
       >
         {isApproveLoading ? "Processing..." : "Approve"}
       </button>
@@ -177,23 +201,6 @@ const Game1 = ({
       >
         {isPlayLoading ? "Processing..." : "Play Game"}
       </button>
-      {isApproveSuccess && (
-        <div className="mt-2 text-white">
-          <p>Approve Transaction Hash: {approveHash}</p>
-        </div>
-      )}
-      {isPlaySuccess && (
-        <div className="mt-2 text-white">
-          <p>Play Transaction Hash: {playGameHash}</p>
-          {playError ? (
-            <p className="text-red-500">
-              Error in play transaction: {playError.message}
-            </p>
-          ) : (
-            <p className="text-green-500">Play transaction successful</p>
-          )}
-        </div>
-      )}
     </div>
   );
 };

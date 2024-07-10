@@ -30,12 +30,13 @@ const Player = ({
 
   return (
     <div className="text-1xl text-center w-full p-2 mb-5 border border-purple-300 rounded-xl bg-black">
-      <h2 className="text-2xl text-purple-400">Player Informations</h2>
+      <h2 className="text-2xl text-purple-400 font-extrabold">
+        Player Informations
+      </h2>
       <div>
         <strong>Number of Tokens:</strong>{" "}
         {tokenBalance?.toString() || "Loading..."}
       </div>
-      {console.log(playerData)}
       <div>
         <strong>Total Gains:</strong>{" "}
         {playerData ? playerData[0]?.toString() : "Loading..."}
