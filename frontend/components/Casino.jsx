@@ -15,6 +15,7 @@ import DevolverTokens from "./DevolverTokens";
 import Game1 from "./Game1";
 import Game2 from "./Game2";
 import SlotMachine from "./SlotMachine";
+import SlotMachine2 from "./SlotMachine2";
 import Events from "./Events";
 import { parseAbiItem } from "viem";
 import { publicClient } from "../utils/client";
@@ -26,8 +27,10 @@ const Casino = ({ address }) => {
   const [isOwner, setIsOwner] = useState(false);
   const [refresh, setRefresh] = useState(false);
   const [events, setEvents] = useState([]);
-  const [result, setResult] = useState(null);
-  const [spinning, setSpinning] = useState(false);
+  const [result1, setResult1] = useState(null);
+  const [spinning1, setSpinning1] = useState(false);
+  const [result2, setResult2] = useState(null);
+  const [spinning2, setSpinning2] = useState(false);
   const chainId = useChainId();
 
   const isOnExpectedNetwork =
@@ -260,31 +263,33 @@ const Casino = ({ address }) => {
           <div>
             <Game1
               address={address}
-              tokenAddress={contractTokenAddress}
-              tokenAbi={contractTokenAbi}
               casinoAddress={contractCasinoAddress}
               casinoAbi={contractCasinoAbi}
+              tokenAddress={contractTokenAddress}
+              tokenAbi={contractTokenAbi}
               setRefresh={setRefresh}
-              setSpinning={setSpinning}
-              setResult={setResult}
+              setSpinning={setSpinning1}
+              setResult={setResult1}
             />
-          </div>
-          <div>
-            <SlotMachine spinning={spinning} result={result} />
+            <SlotMachine spinning={spinning1} result={result1} />
           </div>
           <p className="text-gray-400 italic">*1/9 chance of winning</p>
         </div>
         <div className="w-1/2 p-2 ml-1 border border-purple-300 rounded-xl p-5 bg-black">
-          {/* <Game2
-            address={address}
-            tokenAddress={contractTokenAddress}
-            tokenAbi={contractTokenAbi}
-            casinoAddress={contractCasinoAddress}
-            casinoAbi={contractCasinoAbi}
-            setRefresh={setRefresh}
-            setSpinning={setSpinning}
-            setResult={setResult}
-          /> */}
+          <div>
+            <Game2
+              address={address}
+              casinoAddress={contractCasinoAddress}
+              casinoAbi={contractCasinoAbi}
+              tokenAddress={contractTokenAddress}
+              tokenAbi={contractTokenAbi}
+              setRefresh={setRefresh}
+              setSpinning={setSpinning2}
+              setResult={setResult2}
+            />
+            <SlotMachine2 spinning={spinning2} result={result2} />
+          </div>
+          <p className="text-gray-400 italic">*1/25 chance of winning</p>
         </div>
       </div>
       {/* <div>{isOwner && <Events events={events} />}</div> */}

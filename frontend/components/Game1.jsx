@@ -1,12 +1,3 @@
-// On importe les éléments de Wagmi qui vont nous permettre de :
-/*
-useReadContract : Lire les données d'un contrat
-useAccount : Récupérer les données d'un compte connecté à la DApp via RainbowKit
-useWriteContract : Ecrire des données dans un contrat
-useWaitForTransactionReceipt : Attendre que la transaction soit confirmée (équivalent de transaction.wait() avec ethers)
-useWatchContractEvent : Récupérer en temps réel si un évènement a été émis
-*/
-
 import React, { useState, useEffect } from "react";
 import {
   useWriteContract,
@@ -15,6 +6,7 @@ import {
 } from "wagmi";
 import { useToast } from "./ui/use-toast";
 import ToastManager from "./ToastManager";
+import "../app/blink.css";
 
 const Game1 = ({
   address,
@@ -59,7 +51,6 @@ const Game1 = ({
     abi: casinoAbi,
     eventName: "PlayerWon",
     onLogs(logs) {
-      console.log("New PlayerWon logs!", logs);
       setResult({ won: true, logs });
       setSpinning(false);
     },
@@ -70,7 +61,6 @@ const Game1 = ({
     abi: casinoAbi,
     eventName: "PlayerLost",
     onLogs(logs) {
-      console.log("New PlayerLost logs!", logs);
       setResult({ won: false, logs });
       setSpinning(false);
     },
@@ -78,8 +68,6 @@ const Game1 = ({
 
   const handleApprove = async () => {
     if (!isNaN(betAmount) && betAmount > 0) {
-      console.log("Approving tokens...");
-      console.log("betAmount: ", betAmount);
       approveTokens({
         address: tokenAddress,
         abi: tokenAbi,
@@ -98,8 +86,6 @@ const Game1 = ({
 
   const handlePlayGame = async () => {
     if (approveSuccess) {
-      console.log("Playing game...");
-      console.log("betAmount: ", betAmount);
       try {
         setSpinning(true);
         setResult(null);
@@ -119,12 +105,6 @@ const Game1 = ({
         });
         setSpinning(false);
       }
-    } else {
-      toast({
-        title: "Approval needed",
-        description: "Please approve the tokens first",
-        className: "bg-yellow-500",
-      });
     }
   };
 
@@ -147,28 +127,24 @@ const Game1 = ({
     }
   }, [isPlaySuccess, setRefresh]);
 
+  useEffect(() => {
+    if (playError) {
+      setApproveSuccess(false);
+      setRefresh((prev) => !prev);
+      setBetAmount("");
+      setSpinning(false);
+    }
+  }, [playError]);
+
   return (
     <div>
-      <ToastManager
-        hash={approveHash}
-        isPending={isApprovePending}
-        isLoading={isApproveLoading}
-        isSuccess={isApproveSuccess}
-        error={approveError}
-        alertDescription="Approve Tokens"
-      />
-      <ToastManager
-        hash={playGameHash}
-        isPending={isPlayPending}
-        isLoading={isPlayLoading}
-        isSuccess={isPlaySuccess}
-        error={playError}
-        alertDescription="Play Game"
-      />
       <h2 className="text-4xl text-purple-400 mb-1 font-extrabold">
         SPIN THE GAME ONE
       </h2>
-      <p className="text-lg text-gray-400 mb-4">3 rolls, 3 patterns</p>
+      <p className="text-lg text-gray-400 mb-1">
+        3 rolls, 3 patterns (🚀, 🔥, 💎)
+      </p>
+      <p className="text-lg text-gray-400 mb-4 italic">The bet minimum is 1</p>
       <p className="text-3xl text-yellow-400 mb-7 blink font-extrabold">
         Win multiplier x 7
       </p>
@@ -201,6 +177,22 @@ const Game1 = ({
       >
         {isPlayLoading ? "Processing..." : "Play Game"}
       </button>
+      <ToastManager
+        hash={approveHash}
+        isPending={isApprovePending}
+        isLoading={isApproveLoading}
+        isSuccess={isApproveSuccess}
+        error={approveError}
+        alertDescription="Approve Tokens"
+      />
+      <ToastManager
+        hash={playGameHash}
+        isPending={isPlayPending}
+        isLoading={isPlayLoading}
+        isSuccess={isPlaySuccess}
+        error={playError}
+        alertDescription="Play Game"
+      />
     </div>
   );
 };

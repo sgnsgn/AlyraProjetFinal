@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from "react";
 import "../app/SlotMachine.css";
 
-const motifs = ["🚀", "🔥", "💎"];
+const motifs = ["🌕", "💰", "🪙", "📈", "🎰"];
 
 const getRandomSymbolExcept = (except) => {
   const filteredMotifs = motifs.filter((motif) => motif !== except);
   return filteredMotifs[Math.floor(Math.random() * filteredMotifs.length)];
 };
 
-const SlotMachine = ({ spinning, result }) => {
-  const [reel1, setReel1] = useState("🚀");
-  const [reel2, setReel2] = useState("🔥");
-  const [reel3, setReel3] = useState("💎");
+const SlotMachine2 = ({ spinning, result }) => {
+  const [reel1, setReel1] = useState(motifs[0]);
+  const [reel2, setReel2] = useState(motifs[1]);
+  const [reel3, setReel3] = useState(motifs[2]);
   const [resultMessage, setResultMessage] = useState("");
   const [winning, setWinning] = useState(false);
 
@@ -60,4 +60,4 @@ const SlotMachine = ({ spinning, result }) => {
   );
 };
 
-export default SlotMachine;
+export default SlotMachine2;
