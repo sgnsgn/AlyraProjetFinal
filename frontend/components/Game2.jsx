@@ -130,6 +130,7 @@ const Game2 = ({
       setApproveSuccess(false);
       setRefresh((prev) => !prev);
       setBetAmount("");
+      setSpinning(false);
     }
   }, [isPlaySuccess, setRefresh]);
 
