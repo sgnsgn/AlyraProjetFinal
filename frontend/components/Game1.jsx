@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  useWatchContractEvent,
-} from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { useToast } from "./ui/use-toast";
 import ToastManager from "./ToastManager";
 import "../app/blink.css";
@@ -17,6 +13,8 @@ const Game1 = ({
   setRefresh,
   setSpinning,
   setResult,
+  playerWonEvent,
+  playerLostEvent,
 }) => {
   const [betAmount, setBetAmount] = useState("");
   const [approveSuccess, setApproveSuccess] = useState(false);
@@ -46,26 +44,6 @@ const Game1 = ({
       hash: playGameHash,
     });
 
-  useWatchContractEvent({
-    address: casinoAddress,
-    abi: casinoAbi,
-    eventName: "PlayerWon",
-    onLogs(logs) {
-      setResult({ won: true, logs });
-      setSpinning(false);
-    },
-  });
-
-  useWatchContractEvent({
-    address: casinoAddress,
-    abi: casinoAbi,
-    eventName: "PlayerLost",
-    onLogs(logs) {
-      setResult({ won: false, logs });
-      setSpinning(false);
-    },
-  });
-
   const handleApprove = async () => {
     if (!isNaN(betAmount) && betAmount > 0) {
       approveTokens({
@@ -87,7 +65,6 @@ const Game1 = ({
   const handlePlayGame = async () => {
     if (approveSuccess) {
       try {
-        setSpinning(true);
         setResult(null);
         playGame({
           address: casinoAddress,
@@ -120,13 +97,29 @@ const Game1 = ({
   }, [isApproveSuccess, toast]);
 
   useEffect(() => {
+    if (isPlayLoading) {
+      setSpinning(true);
+    }
+  }, [isPlayLoading]);
+
+  useEffect(() => {
     if (isPlaySuccess) {
       setApproveSuccess(false);
-      setRefresh((prev) => !prev);
       setBetAmount("");
-      setSpinning(false);
     }
-  }, [isPlaySuccess, setRefresh]);
+  }, [isPlaySuccess]);
+
+  useEffect(() => {
+    if (playerWonEvent || playerLostEvent) {
+      if (playerWonEvent) {
+        setResult({ won: true });
+      } else if (playerLostEvent) {
+        setResult({ won: false });
+      }
+      setSpinning(false);
+      setRefresh((prev) => !prev);
+    }
+  }, [playerWonEvent, playerLostEvent, setRefresh, setSpinning, setResult]);
 
   useEffect(() => {
     if (playError) {
