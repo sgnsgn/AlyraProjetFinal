@@ -17,6 +17,8 @@ const Game1 = ({
   setRefresh,
   setSpinning,
   setResult,
+  playerWonEvent,
+  playerLostEvent,
 }) => {
   const [betAmount, setBetAmount] = useState("");
   const [approveSuccess, setApproveSuccess] = useState(false);
@@ -124,9 +126,15 @@ const Game1 = ({
       setApproveSuccess(false);
       setRefresh((prev) => !prev);
       setBetAmount("");
-      setSpinning(false);
     }
   }, [isPlaySuccess, setRefresh]);
+
+  useEffect(() => {
+    if (playerWonEvent || playerLostEvent) {
+      setSpinning(false);
+      setRefresh((prev) => !prev);
+    }
+  }, [playerWonEvent, playerLostEvent]);
 
   useEffect(() => {
     if (playError) {
