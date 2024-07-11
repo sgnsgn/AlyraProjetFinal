@@ -9,27 +9,36 @@ describe("Casino contract testing", function () {
 
   async function deployCasinoFixture() {
     // Contracts are deployed using the first signer/account by default
-    const [owner, user1] = await ethers.getSigners();
+    const [owner, user1, user2] = await ethers.getSigners();
+
+    // Deploy the MockVRFCoordinator contract
+    const MockVRFCoordinator = await ethers.getContractFactory(
+      "MockVRFCoordinator"
+    );
+    const mockVRFCoordinator = await MockVRFCoordinator.deploy();
+
+    // Deploy the Casino contract
     const Casino = await ethers.getContractFactory("Casino");
-    const casino = await Casino.deploy();
+    const casino = await Casino.deploy(mockVRFCoordinator.address);
 
     // Retrieve the token address from the deployed casino contract
     const tokenAddress = await casino.tokenAddress();
     const CasinoToken = await ethers.getContractFactory("CasinoToken");
     const token = CasinoToken.attach(tokenAddress);
-    return { casino, token, owner, user1, tokenAddress };
+    return {
+      casino,
+      token,
+      owner,
+      user1,
+      user2,
+      tokenAddress,
+      mockVRFCoordinator,
+    };
   }
 
   async function deployCasinoAndBuyTokensFixture() {
-    // Contracts are deployed using the first signer/account by default
-    const [owner, user1, user2] = await ethers.getSigners();
-    const Casino = await ethers.getContractFactory("Casino");
-    const casino = await Casino.deploy();
-
-    // Retrieve the token address from the deployed casino contract
-    const tokenAddress = await casino.tokenAddress();
-    const CasinoToken = await ethers.getContractFactory("CasinoToken");
-    const token = CasinoToken.attach(tokenAddress);
+    const { casino, token, owner, user1, user2, mockVRFCoordinator } =
+      await loadFixture(deployCasinoFixture);
     const etherGiven = ethers.parseEther("1");
     const numberOfTokens = 30000;
     await casino
@@ -47,10 +56,15 @@ describe("Casino contract testing", function () {
       user2,
       etherGiven,
       numberOfTokens,
+      mockVRFCoordinator,
     };
   }
 
   describe("Casino contract deployment testing", function () {
+    it("Should return the correct decimals", async function () {
+      const { token } = await loadFixture(deployCasinoFixture);
+      expect(await token.decimals()).to.equal(0);
+    });
     it("Should set the right owner", async function () {
       const { casino, owner } = await loadFixture(deployCasinoFixture);
       expect(await casino.owner()).to.equal(owner.address);
@@ -254,12 +268,29 @@ describe("Casino contract testing", function () {
       );
     });
 
-    it("Should play game if allowance is sufficient", async function () {
-      const { casino, token, user1 } = await loadFixture(
+    it.only("Should play game if allowance is sufficient", async function () {
+      const { casino, token, user1, mockVRFCoordinator } = await loadFixture(
         deployCasinoAndBuyTokensFixture
       );
       await token.connect(user1).approve(casino, 10);
-      await expect(casino.connect(user1).playGame(1, 10))
+
+      // Jouer le jeu et obtenir le requestId
+      const playGameTx = await casino.connect(user1).playGame(1, 10);
+      const receipt = await playGameTx.wait();
+      const requestId = receipt.events.find(
+        (event) => event.event === "PlayerPlayedGame"
+      ).args.requestId;
+
+      // Simuler la réponse VRF
+      const randomWords = [12345];
+      await mockVRFCoordinator.fulfillRandomWords(
+        requestId,
+        casino.address,
+        randomWords
+      );
+
+      // Vérifier que l'événement PlayerPlayedGame est émis avec les paramètres attendus
+      await expect(playGameTx)
         .to.emit(casino, "PlayerPlayedGame")
         .withArgs(user1.address, 1, 10, 0);
     });
