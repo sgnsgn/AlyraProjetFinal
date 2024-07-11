@@ -48,26 +48,6 @@ const Game1 = ({
       hash: playGameHash,
     });
 
-  useWatchContractEvent({
-    address: casinoAddress,
-    abi: casinoAbi,
-    eventName: "PlayerWon",
-    onLogs(logs) {
-      setResult({ won: true, logs });
-      setSpinning(false);
-    },
-  });
-
-  useWatchContractEvent({
-    address: casinoAddress,
-    abi: casinoAbi,
-    eventName: "PlayerLost",
-    onLogs(logs) {
-      setResult({ won: false, logs });
-      setSpinning(false);
-    },
-  });
-
   const handleApprove = async () => {
     if (!isNaN(betAmount) && betAmount > 0) {
       approveTokens({
@@ -131,6 +111,11 @@ const Game1 = ({
 
   useEffect(() => {
     if (playerWonEvent || playerLostEvent) {
+      if (playerWonEvent) {
+        setResult({ won: true });
+      } else if (playerLostEvent) {
+        setResult({ won: false });
+      }
       setSpinning(false);
       setRefresh((prev) => !prev);
     }
