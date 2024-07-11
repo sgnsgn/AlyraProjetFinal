@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  useWatchContractEvent,
-} from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { useToast } from "./ui/use-toast";
 import ToastManager from "./ToastManager";
 import "../app/blink.css";
@@ -69,7 +65,6 @@ const Game1 = ({
   const handlePlayGame = async () => {
     if (approveSuccess) {
       try {
-        setSpinning(true);
         setResult(null);
         playGame({
           address: casinoAddress,
@@ -102,12 +97,17 @@ const Game1 = ({
   }, [isApproveSuccess, toast]);
 
   useEffect(() => {
+    if (isPlayLoading) {
+      setSpinning(true);
+    }
+  }, [isPlayLoading]);
+
+  useEffect(() => {
     if (isPlaySuccess) {
       setApproveSuccess(false);
-      setRefresh((prev) => !prev);
       setBetAmount("");
     }
-  }, [isPlaySuccess, setRefresh]);
+  }, [isPlaySuccess]);
 
   useEffect(() => {
     if (playerWonEvent || playerLostEvent) {
@@ -119,7 +119,7 @@ const Game1 = ({
       setSpinning(false);
       setRefresh((prev) => !prev);
     }
-  }, [playerWonEvent, playerLostEvent]);
+  }, [playerWonEvent, playerLostEvent, setRefresh, setSpinning, setResult]);
 
   useEffect(() => {
     if (playError) {

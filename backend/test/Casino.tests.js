@@ -673,4 +673,10 @@ describe("Casino contract testing", function () {
       ).to.be.revertedWith("Contract does not accept plain Ether transfers");
     });
   });
+  describe("Decimals function", function () {
+    it("Should return the correct decimals", async function () {
+      const { casino, token } = await loadFixture(deployCasinoFixture);
+      expect(await token.decimals()).to.equal(0);
+    });
+  });
 });
