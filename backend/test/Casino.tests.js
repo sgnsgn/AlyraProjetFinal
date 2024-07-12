@@ -661,6 +661,14 @@ describe("Casino contract testing", function () {
       await expect(token.connect(user1).mint(user1, 10000000)).to.be.reverted;
     });
   });
+
+  describe("Decimals", function () {
+    it("Should return the correct decimals", async function () {
+      const { token } = await loadFixture(deployCasinoFixture);
+      expect(await token.decimals()).to.equal(0);
+    });
+  });
+
   describe("Receive function", function () {
     it("Should revert when Ether is sent directly to the contract", async function () {
       const { casino, owner } = await loadFixture(deployCasinoFixture);
