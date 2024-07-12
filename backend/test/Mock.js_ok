@@ -6,14 +6,18 @@ describe("VRFCoordinatorV2_5Mock Deployment", function () {
   async function deployVRFMockFixture() {
     const [owner] = await ethers.getSigners();
 
+    const BASE_FEE = "1000000000000000"; // 0.001 ether as base fee
+    const GAS_PRICE = "50000000000"; // 50 gwei
+    const WEI_PER_UNIT_LINK = "10000000000000000"; // 0.01 ether per LINK
+
     // Déployer le MockVRFCoordinator
     const MockVRFCoordinator = await ethers.getContractFactory(
       "VRFCoordinatorV2_5Mock"
     );
     const mockVRFCoordinator = await MockVRFCoordinator.deploy(
-      ethers.parseEther("0.1"), // Base fee
-      1e9, // Gas price link
-      ethers.parseEther("0.000001") // Wei per unit link (ajustez selon vos besoins)
+      BASE_FEE,
+      GAS_PRICE,
+      WEI_PER_UNIT_LINK
     );
 
     const mockVRFCoordinatorAddress = await mockVRFCoordinator.getAddress();
@@ -37,11 +41,13 @@ describe("VRFCoordinatorV2_5Mock Deployment", function () {
       expect(await mockVRFCoordinator.owner()).to.equal(owner.address);
 
       // Vérifier les paramètres initiaux
-      expect(await mockVRFCoordinator.BASE_FEE()).to.equal(
-        ethers.parseEther("0.1")
+      expect(await mockVRFCoordinator.i_base_fee()).to.equal(
+        ethers.parseEther("0.001")
       );
-      expect(await mockVRFCoordinator.GAS_PRICE_LINK()).to.equal(1e9);
-      expect(await mockVRFCoordinator.MAX_CONSUMERS()).to.equal(100);
+      expect(await mockVRFCoordinator.i_gas_price()).to.equal(5e10);
+      expect(await mockVRFCoordinator.i_wei_per_unit_link()).to.equal(
+        10000000000000000n
+      );
     });
   });
 });

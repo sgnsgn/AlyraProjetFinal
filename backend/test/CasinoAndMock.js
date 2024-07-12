@@ -1,18 +1,33 @@
+const { network } = require("hardhat");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-const { expect } = require("chai");
+const {
+  networkConfig,
+  developmentChains,
+} = require("../helper-hardhat-config");
+const { assert, expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("Casino contract testing", function () {
   const TOKEN_PRICE = ethers.parseEther("0.00003");
 
-  async function deployCasinoFixture() {
+  async function deployVRFCoordinatorAndCasinoFixture() {
     const [owner, user1] = await ethers.getSigners();
+
+    const BASE_FEE = "1000000000000000"; // 0.001 ether as base fee
+    const GAS_PRICE = "50000000000"; // 50 gwei
+    const WEI_PER_UNIT_LINK = "10000000000000000"; // 0.01 ether per LINK
+
+    const chainId = network.config.chainId;
 
     // Déployer le MockVRFCoordinator
     const MockVRFCoordinator = await ethers.getContractFactory(
-      "VRFCoordinatorV2MyMock"
+      "VRFCoordinatorV2_5Mock"
     );
-    const mockVRFCoordinator = await MockVRFCoordinator.deploy();
+    const mockVRFCoordinator = await MockVRFCoordinator.deploy(
+      BASE_FEE,
+      GAS_PRICE,
+      WEI_PER_UNIT_LINK
+    );
 
     const mockVRFCoordinatorAddress = await mockVRFCoordinator.getAddress();
 
@@ -24,6 +39,20 @@ describe("Casino contract testing", function () {
     const tokenAddress = await casino.tokenAddress();
     const CasinoToken = await ethers.getContractFactory("CasinoToken");
     const token = CasinoToken.attach(tokenAddress);
+
+    const fundAmount =
+      networkConfig[chainId]["fundAmount"] || "1000000000000000000";
+
+    // Créer un abonnement
+    const transaction = await mockVRFCoordinator.createSubscription();
+    const transactionReceipt = await transaction.wait(1);
+    const subscriptionId = ethers.BigNumber.from(
+      transactionReceipt.events[0].topics[1]
+    );
+
+    await mockVRFCoordinator.fundSubscription(subscriptionId, fundAmount);
+
+    await mockVRFCoordinator.addConsumer(subscriptionId, casino.getAddress());
 
     // Acheter des jetons pour l'utilisateur
     await casino
@@ -40,9 +69,33 @@ describe("Casino contract testing", function () {
     };
   }
 
+  describe("Fixture testing", function () {
+    it("Should deploy VRFCoordinatorV2_5Mock with correct initial setup", async function () {
+      const { mockVRFCoordinator, mockVRFCoordinatorAddress, owner } =
+        await loadFixture(deployVRFCoordinatorAndCasinoFixture);
+
+      // Vérifier que l'adresse du MockVRFCoordinator est correcte
+      expect(mockVRFCoordinatorAddress).to.properAddress;
+
+      // Vérifier que le propriétaire est bien défini
+      expect(await mockVRFCoordinator.owner()).to.equal(owner.address);
+
+      // Vérifier les paramètres initiaux
+      expect(await mockVRFCoordinator.i_base_fee()).to.equal(
+        ethers.parseEther("0.001")
+      );
+      expect(await mockVRFCoordinator.i_gas_price()).to.equal(5e10);
+      expect(await mockVRFCoordinator.i_wei_per_unit_link()).to.equal(
+        10000000000000000n
+      );
+    });
+  });
+
   describe("Playing games", function () {
     it("Should emit RandomWordsRequested event", async function () {
-      const { casino, token, user1 } = await loadFixture(deployCasinoFixture);
+      const { casino, token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       await token.connect(user1).approve(casino, 10);
 
       await expect(casino.connect(user1).playGame(1, 10)).to.emit(
@@ -53,7 +106,7 @@ describe("Casino contract testing", function () {
 
     it("Should handle VRF response correctly", async function () {
       const { casino, token, user1, mockVRFCoordinator } = await loadFixture(
-        deployCasinoFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await token.connect(user1).approve(casino, 10);
 
@@ -80,15 +133,16 @@ describe("Casino contract testing", function () {
 
     it("Should store requestId and player data correctly", async function () {
       const { casino, token, user1, mockVRFCoordinator } = await loadFixture(
-        deployCasinoFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await token.connect(user1).approve(casino, 10);
 
       // Jouer le jeu et obtenir le requestId
       const playGameTx = await casino.connect(user1).playGame(1, 10);
       const receipt = await playGameTx.wait();
-      const requestId = receipt.events.find((event) => event.event === "").args
-        .requestId;
+      const requestId = receipt.events.find(
+        (event) => event.event === "RandomWordsRequested"
+      ).args.requestId;
 
       // Vérifier que les données sont correctement stockées
       expect(await casino.requestIdToPlayer(requestId)).to.equal(user1.address);

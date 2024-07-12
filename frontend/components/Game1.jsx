@@ -111,12 +111,12 @@ const Game1 = ({
 
   useEffect(() => {
     if (playerWonEvent || playerLostEvent) {
+      setSpinning(false);
       if (playerWonEvent) {
         setResult({ won: true });
       } else if (playerLostEvent) {
         setResult({ won: false });
       }
-      setSpinning(false);
       setRefresh((prev) => !prev);
     }
   }, [playerWonEvent, playerLostEvent, setRefresh, setSpinning, setResult]);
