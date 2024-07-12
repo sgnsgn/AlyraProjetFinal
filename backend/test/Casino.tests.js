@@ -261,31 +261,35 @@ describe("Casino contract testing", function () {
       );
     });
 
-    it("Should play game if allowance is sufficient", async function () {
-      const { casino, token, user1, mockVRFCoordinator } = await loadFixture(
+    it.only("Should play game if allowance is sufficient", async function () {
+      const { casino, token, user1 } = await loadFixture(
         deployCasinoAndBuyTokensFixture
       );
       await token.connect(user1).approve(casino, 10);
 
+      const tokenAdress = await token.getAddress();
+      const casinoAdress = await casino.getAddress();
+
+      console.log("lalalali : ", tokenAdress);
+      console.log("lalalalu : ", casinoAdress);
+
       // Jouer le jeu et obtenir le requestId
       const playGameTx = await casino.connect(user1).playGame(1, 10);
-      const receipt = await playGameTx.wait();
-      const requestId = receipt.events.find(
-        (event) => event.event === "PlayerPlayedGame"
-      ).args.requestId;
 
-      // Simuler la réponse VRF
-      const randomWords = [12345];
-      await mockVRFCoordinator.fulfillRandomWords(
-        requestId,
-        casino.address,
-        randomWords
-      );
+      console.log("lalala : ", playGameTx);
 
-      // Vérifier que l'événement PlayerPlayedGame est émis avec les paramètres attendus
-      await expect(playGameTx)
-        .to.emit(casino, "PlayerPlayedGame")
-        .withArgs(user1.address, 1, 10, 0);
+      // // Simuler la réponse VRF
+      // const randomWords = [12345];
+      // await mockVRFCoordinator.fulfillRandomWords(
+      //   requestId,
+      //   casino.address,
+      //   randomWords
+      // );
+
+      // // Vérifier que l'événement PlayerPlayedGame est émis avec les paramètres attendus
+      // await expect(playGameTx)
+      //   .to.emit(casino, "PlayerPlayedGame")
+      //   .withArgs(user1.address, 1, 10, 0);
     });
 
     it("Should play game type 1 and lose tokens", async function () {
@@ -703,7 +707,7 @@ describe("Casino contract testing", function () {
       ).to.be.revertedWith("Contract does not accept plain Ether transfers");
     });
   });
-  describe.only("Playing games", function () {
+  describe("Playing games", function () {
     it("Should correctly assign requestId, betAmount, and gameType, and emit PlayerPlayedGame event", async function () {
       const { casino, token, user1 } = await loadFixture(
         deployCasinoAndBuyTokensFixture

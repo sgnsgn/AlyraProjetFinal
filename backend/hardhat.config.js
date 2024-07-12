@@ -19,11 +19,9 @@ module.exports = {
       accounts: [`0x${PK}`],
       chainId: 11155111,
     },
-    hardhat: {
-      forking: {
-        url: "https://ethereum-sepolia.blockpi.network/v1/rpc/6142a3b1a140903e2583833c404cbb35ee099221",
-        blockNumber: 6250000,
-      },
+    localhost: {
+      url: "http://127.0.0.1:8545",
+      chainId: 31337,
     },
   },
   // Active le rapporteur de gaz (gas reporter) pour afficher les coûts de gaz
