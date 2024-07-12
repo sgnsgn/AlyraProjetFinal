@@ -11,12 +11,6 @@ describe("Casino contract testing", function () {
     // Contracts are deployed using the first signer/account by default
     const [owner, user1, user2] = await ethers.getSigners();
 
-    // Deploy the MockVRFCoordinator contract
-    const MockVRFCoordinator = await ethers.getContractFactory(
-      "MockVRFCoordinator"
-    );
-    const mockVRFCoordinator = await MockVRFCoordinator.deploy();
-
     // Deploy the Casino contract
     const Casino = await ethers.getContractFactory("Casino");
     const casino = await Casino.deploy(mockVRFCoordinator.address);
@@ -32,13 +26,13 @@ describe("Casino contract testing", function () {
       user1,
       user2,
       tokenAddress,
-      mockVRFCoordinator,
     };
   }
 
   async function deployCasinoAndBuyTokensFixture() {
-    const { casino, token, owner, user1, user2, mockVRFCoordinator } =
-      await loadFixture(deployCasinoFixture);
+    const { casino, token, owner, user1, user2 } = await loadFixture(
+      deployCasinoFixture
+    );
     const etherGiven = ethers.parseEther("1");
     const numberOfTokens = 30000;
     await casino
@@ -268,7 +262,7 @@ describe("Casino contract testing", function () {
       );
     });
 
-    it.only("Should play game if allowance is sufficient", async function () {
+    it("Should play game if allowance is sufficient", async function () {
       const { casino, token, user1, mockVRFCoordinator } = await loadFixture(
         deployCasinoAndBuyTokensFixture
       );
@@ -690,6 +684,12 @@ describe("Casino contract testing", function () {
     it("Should revert when a non authorized user tries to mint", async function () {
       const { token, user1 } = await loadFixture(deployCasinoFixture);
       await expect(token.connect(user1).mint(user1, 10000000)).to.be.reverted;
+    });
+  });
+  describe("Decimal number", function () {
+    it("Should return the correct decimal amount", async function () {
+      const { token, user1 } = await loadFixture(deployCasinoFixture);
+      await expect(token.decimals()).to.equal(0);
     });
   });
   describe("Receive function", function () {
