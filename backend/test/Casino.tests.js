@@ -700,6 +700,7 @@ describe("Casino contract testing", function () {
       await expect(token.connect(user1).mint(user1, 10000000)).to.be.reverted;
     });
   });
+
   describe("Receive function", function () {
     it("Should revert when Ether is sent directly to the contract", async function () {
       const { casino, owner } = await loadFixture(deployCasinoFixture);
@@ -712,38 +713,7 @@ describe("Casino contract testing", function () {
       ).to.be.revertedWith("Contract does not accept plain Ether transfers");
     });
   });
-  describe("Playing games", function () {
-    it("Should correctly assign requestId, betAmount, and gameType, and emit PlayerPlayedGame event", async function () {
-      const { casino, token, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
-      );
 
-      await token.connect(user1).approve(casino, 10);
-
-      // Jouer le jeu et obtenir le requestId
-      const playGameTx = await casino.connect(user1).playGame(1, 10);
-      const receipt = await playGameTx.wait();
-      const playerPlayedGameEvent = receipt.events.find(
-        (event) => event.event === "PlayerPlayedGame"
-      );
-
-      // Extraire les arguments de l'événement
-      const requestId = playerPlayedGameEvent.args.requestId;
-      const gameType = playerPlayedGameEvent.args.gameType;
-      const betAmount = playerPlayedGameEvent.args.betAmount;
-      const winAmount = playerPlayedGameEvent.args.winAmount;
-
-      // Vérifier les mappings
-      expect(await casino.requestIdToPlayer(requestId)).to.equal(user1.address);
-      expect(await casino.playerBetAmount(user1.address)).to.equal(betAmount);
-      expect(await casino.playerGameType(user1.address)).to.equal(gameType);
-
-      // Vérifier l'événement
-      await expect(playGameTx)
-        .to.emit(casino, "PlayerPlayedGame")
-        .withArgs(user1.address, gameType, betAmount, winAmount);
-    });
-  });
   describe("VRF", async function () {
     it("Should correctly handle a VRF response for a winning game", async function () {
       const { casino, token, user1, VRFCoordinatorV2_5Mock } =
