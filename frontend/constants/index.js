@@ -1,7 +1,5 @@
 export const contractCasinoAddress =
   "0xF517eeB7b1B571117c8c3e36b7e9fb9fE0380414";
-// export const contractCasinoAddress =
-//   "0x9C58323e7E8B8B05d445AF4b09b03DA5347f881d";
 export const contractCasinoAbi = [
   {
     inputs: [],
@@ -384,8 +382,6 @@ export const contractCasinoAbi = [
     type: "receive",
   },
 ];
-// export const contractTokenAddress =
-//   "0x5F021c463f534f18Ebc6959Aad570D7d1E0aCf51";
 export const contractTokenAddress =
   "0x03Dd97437769B8cfFD69F3b4384267FB1781356e";
 export const contractTokenAbi = [
