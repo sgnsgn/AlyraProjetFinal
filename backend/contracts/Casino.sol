@@ -243,7 +243,6 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         playerGameType[msg.sender] = gameType;
 
         emit RandomWordsRequested(requestId, msg.sender, gameType, betAmount);
-        // emit PlayerPlayedGame(msg.sender, gameType, betAmount, 0); // winAmount is unknown until VRF returns
     }
 
     function checkContractSolvency(
