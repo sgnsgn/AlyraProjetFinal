@@ -1,0 +1,47 @@
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
+
+describe("VRFCoordinatorV2_5Mock Deployment", function () {
+  async function deployVRFMockFixture() {
+    const [owner] = await ethers.getSigners();
+
+    // Déployer le MockVRFCoordinator
+    const MockVRFCoordinator = await ethers.getContractFactory(
+      "VRFCoordinatorV2_5Mock"
+    );
+    const mockVRFCoordinator = await MockVRFCoordinator.deploy(
+      ethers.parseEther("0.1"), // Base fee
+      1e9, // Gas price link
+      ethers.parseEther("0.000001") // Wei per unit link (ajustez selon vos besoins)
+    );
+
+    const mockVRFCoordinatorAddress = await mockVRFCoordinator.getAddress();
+
+    return {
+      mockVRFCoordinator,
+      mockVRFCoordinatorAddress,
+      owner,
+    };
+  }
+
+  describe("Fixture testing", function () {
+    it("Should deploy VRFCoordinatorV2_5Mock with correct initial setup", async function () {
+      const { mockVRFCoordinator, mockVRFCoordinatorAddress, owner } =
+        await loadFixture(deployVRFMockFixture);
+
+      // Vérifier que l'adresse du MockVRFCoordinator est correcte
+      expect(mockVRFCoordinatorAddress).to.properAddress;
+
+      // Vérifier que le propriétaire est bien défini
+      expect(await mockVRFCoordinator.owner()).to.equal(owner.address);
+
+      // Vérifier les paramètres initiaux
+      expect(await mockVRFCoordinator.BASE_FEE()).to.equal(
+        ethers.parseEther("0.1")
+      );
+      expect(await mockVRFCoordinator.GAS_PRICE_LINK()).to.equal(1e9);
+      expect(await mockVRFCoordinator.MAX_CONSUMERS()).to.equal(100);
+    });
+  });
+});

@@ -49,6 +49,12 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     uint256 public biggestTotalWinEver;
 
     event PlayerBoughtTokens(address indexed player, uint256 amount);
+    event RandomWordsRequested(
+        uint256 indexed requestId,
+        address indexed player,
+        uint8 gameType,
+        uint256 betAmount
+    );
     event PlayerPlayedGame(
         address indexed player,
         uint8 gameType,
@@ -75,7 +81,7 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     }
 
     function requestRandomWords(
-        uint32 _numOfWords
+        uint32 _numWords
     ) private returns (uint256 requestId) {
         requestId = COORDINATOR.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
@@ -83,10 +89,10 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
                 subId: s_subscriptionId,
                 requestConfirmations: requestConfirmations,
                 callbackGasLimit: callbackGasLimit,
-                numWords: _numOfWords,
+                numWords: _numWords,
                 extraArgs: VRFV2PlusClient._argsToBytes(
                     VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
-                ) //paying in LINK
+                )
             })
         );
     }
@@ -236,7 +242,8 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         playerBetAmount[msg.sender] = betAmount;
         playerGameType[msg.sender] = gameType;
 
-        emit PlayerPlayedGame(msg.sender, gameType, betAmount, 0); // winAmount is unknown until VRF returns
+        emit RandomWordsRequested(requestId, msg.sender, gameType, betAmount);
+        // emit PlayerPlayedGame(msg.sender, gameType, betAmount, 0); // winAmount is unknown until VRF returns
     }
 
     function checkContractSolvency(
