@@ -65,8 +65,10 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     event PlayerBecameInactive(address indexed player);
     event PlayerGetBackEthers(address indexed player, uint256 amount);
 
-    constructor() VRFConsumerBaseV2Plus(SEPOLIA_VRF_COORDINATOR) {
-        COORDINATOR = IVRFCoordinatorV2Plus(SEPOLIA_VRF_COORDINATOR);
+    constructor(
+        address _vrfCoordinator
+    ) VRFConsumerBaseV2Plus(_vrfCoordinator) {
+        COORDINATOR = IVRFCoordinatorV2Plus(_vrfCoordinator);
         token = new CasinoToken(address(this));
         token.mint(address(this), 1000000);
         tokenAddress = address(token);

@@ -1,24 +1,34 @@
 const {
   loadFixture,
 } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
-const { expect } = require("chai");
 require("@nomicfoundation/hardhat-chai-matchers");
+const { expect } = require("chai");
 
 describe("Casino contract testing", function () {
   const TOKEN_PRICE = ethers.parseEther("0.00003");
 
   async function deployCasinoFixture() {
-    // Contracts are deployed using the first signer/account by default
     const [owner, user1, user2] = await ethers.getSigners();
+
+    // Deploy VRFCoordinatorV2_5Mock first
+    const VRFCoordinatorV2_5Mock = await ethers.getContractFactory(
+      "VRFCoordinatorV2_5Mock"
+    );
+    const vrfCoordinator = await VRFCoordinatorV2_5Mock.deploy(
+      ethers.parseUnits("0.25", "ether"), // _baseFee
+      ethers.parseUnits("1", "gwei"), // _gasPrice
+      ethers.parseUnits("1", 18) // _weiPerUnitLink
+    );
 
     // Deploy the Casino contract
     const Casino = await ethers.getContractFactory("Casino");
-    const casino = await Casino.deploy();
+    const casino = await Casino.deploy(vrfCoordinator.getAddress());
 
     // Retrieve the token address from the deployed casino contract
     const tokenAddress = await casino.tokenAddress();
     const CasinoToken = await ethers.getContractFactory("CasinoToken");
     const token = CasinoToken.attach(tokenAddress);
+
     return {
       casino,
       token,
@@ -26,6 +36,7 @@ describe("Casino contract testing", function () {
       user1,
       user2,
       tokenAddress,
+      VRFCoordinatorV2_5Mock: vrfCoordinator,
     };
   }
 
@@ -53,7 +64,7 @@ describe("Casino contract testing", function () {
     };
   }
 
-  describe("Casino contract deployment testing", function () {
+  describe.only("Casino contract deployment testing", function () {
     it("Should return the correct decimals", async function () {
       const { token } = await loadFixture(deployCasinoFixture);
       expect(await token.decimals()).to.equal(0);
@@ -261,7 +272,7 @@ describe("Casino contract testing", function () {
       );
     });
 
-    it.only("Should play game if allowance is sufficient", async function () {
+    it("Should play game if allowance is sufficient", async function () {
       const { casino, token, user1 } = await loadFixture(
         deployCasinoAndBuyTokensFixture
       );
@@ -689,12 +700,6 @@ describe("Casino contract testing", function () {
       await expect(token.connect(user1).mint(user1, 10000000)).to.be.reverted;
     });
   });
-  describe("Decimal number", function () {
-    it("Should return the correct decimals", async function () {
-      const { token } = await loadFixture(deployCasinoFixture);
-      expect(await token.decimals()).to.equal(0);
-    });
-  });
   describe("Receive function", function () {
     it("Should revert when Ether is sent directly to the contract", async function () {
       const { casino, owner } = await loadFixture(deployCasinoFixture);
@@ -737,6 +742,36 @@ describe("Casino contract testing", function () {
       await expect(playGameTx)
         .to.emit(casino, "PlayerPlayedGame")
         .withArgs(user1.address, gameType, betAmount, winAmount);
+    });
+  });
+  describe("VRF", async function () {
+    it("Should correctly handle a VRF response for a winning game", async function () {
+      const { casino, token, user1, VRFCoordinatorV2_5Mock } =
+        await loadFixture(deployCasinoAndBuyTokensFixture);
+
+      await token.connect(user1).approve(casino, 10);
+
+      // Jouer le jeu
+      const playGameTx = await casino.connect(user1).playGame(1, 10);
+      const receipt = await playGameTx.wait();
+
+      // Trouver le requestId
+      const requestId = receipt.events.find(
+        (e) => e.event === "RandomWordsRequested"
+      ).args.requestId;
+
+      // Simuler une réponse VRF gagnante
+      const winningNumber = 0; // Assurez-vous que ce nombre correspond à une victoire dans votre logique
+      await VRFCoordinatorV2_5Mock.fulfillRandomWords(
+        requestId,
+        casino.address,
+        [winningNumber]
+      );
+
+      // Vérifier que le joueur a gagné
+      const player = await casino.players(user1.address);
+      expect(player.totalGains).to.be.gt(0);
+      expect(player.nbGamesWins).to.equal(1);
     });
   });
 });
