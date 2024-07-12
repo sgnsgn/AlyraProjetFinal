@@ -13,7 +13,7 @@ describe("Casino contract testing", function () {
 
     // Deploy the Casino contract
     const Casino = await ethers.getContractFactory("Casino");
-    const casino = await Casino.deploy(mockVRFCoordinator.address);
+    const casino = await Casino.deploy();
 
     // Retrieve the token address from the deployed casino contract
     const tokenAddress = await casino.tokenAddress();
@@ -50,7 +50,6 @@ describe("Casino contract testing", function () {
       user2,
       etherGiven,
       numberOfTokens,
-      mockVRFCoordinator,
     };
   }
 
@@ -687,9 +686,9 @@ describe("Casino contract testing", function () {
     });
   });
   describe("Decimal number", function () {
-    it("Should return the correct decimal amount", async function () {
-      const { token, user1 } = await loadFixture(deployCasinoFixture);
-      await expect(token.decimals()).to.equal(0);
+    it("Should return the correct decimals", async function () {
+      const { token } = await loadFixture(deployCasinoFixture);
+      expect(await token.decimals()).to.equal(0);
     });
   });
   describe("Receive function", function () {
@@ -702,6 +701,38 @@ describe("Casino contract testing", function () {
           value: ethers.parseEther("1.0"),
         })
       ).to.be.revertedWith("Contract does not accept plain Ether transfers");
+    });
+  });
+  describe.only("Playing games", function () {
+    it("Should correctly assign requestId, betAmount, and gameType, and emit PlayerPlayedGame event", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployCasinoAndBuyTokensFixture
+      );
+
+      await token.connect(user1).approve(casino, 10);
+
+      // Jouer le jeu et obtenir le requestId
+      const playGameTx = await casino.connect(user1).playGame(1, 10);
+      const receipt = await playGameTx.wait();
+      const playerPlayedGameEvent = receipt.events.find(
+        (event) => event.event === "PlayerPlayedGame"
+      );
+
+      // Extraire les arguments de l'événement
+      const requestId = playerPlayedGameEvent.args.requestId;
+      const gameType = playerPlayedGameEvent.args.gameType;
+      const betAmount = playerPlayedGameEvent.args.betAmount;
+      const winAmount = playerPlayedGameEvent.args.winAmount;
+
+      // Vérifier les mappings
+      expect(await casino.requestIdToPlayer(requestId)).to.equal(user1.address);
+      expect(await casino.playerBetAmount(user1.address)).to.equal(betAmount);
+      expect(await casino.playerGameType(user1.address)).to.equal(gameType);
+
+      // Vérifier l'événement
+      await expect(playGameTx)
+        .to.emit(casino, "PlayerPlayedGame")
+        .withArgs(user1.address, gameType, betAmount, winAmount);
     });
   });
 });
