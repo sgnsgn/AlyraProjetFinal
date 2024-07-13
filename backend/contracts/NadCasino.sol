@@ -104,11 +104,6 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         tokenAddress = address(token);
     }
 
-    /**
-     * @notice Requests randomness from Chainlink VRF
-     * @param _numWords The number of random words to request
-     * @return The ID of the request
-     */
     function requestRandomWords(
         uint32 _numWords
     ) private returns (uint256 requestId) {
@@ -180,11 +175,6 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         delete playerGameType[player];
     }
 
-    /**
-     * @notice Converts tokens to wei
-     * @param _numTokens The number of tokens to convert
-     * @return: The_number of wei
-     */
     function convertTokens(uint256 _numTokens) internal pure returns (uint256) {
         return _numTokens * TOKEN_PRICE;
     }

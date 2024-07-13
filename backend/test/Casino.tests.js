@@ -1,57 +1,81 @@
-const {
-  loadFixture,
-} = require("@nomicfoundation/hardhat-toolbox/network-helpers");
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 require("@nomicfoundation/hardhat-chai-matchers");
 const { expect } = require("chai");
+const { ethers, network } = require("hardhat");
 
-describe("Casino contract testing", function () {
+describe("NadCasino contract testing", function () {
   const TOKEN_PRICE = ethers.parseEther("0.00003");
 
-  async function deployCasinoFixture() {
-    const [owner, user1, user2] = await ethers.getSigners();
+  async function deployVRFCoordinatorAndCasinoFixtureBeforeTheBought() {
+    const [owner, user1] = await ethers.getSigners();
 
-    // Deploy VRFCoordinatorV2_5Mock first
-    const VRFCoordinatorV2_5Mock = await ethers.getContractFactory(
+    const BASE_FEE = "1000000000000000"; // 0.001 ether as base fee
+    const GAS_PRICE = "50000000000"; // 50 gwei
+    const WEI_PER_UNIT_LINK = "10000000000000000"; // 0.01 ether per LINK
+
+    // Déployer le MockVRFCoordinator
+    const MockVRFCoordinator = await ethers.getContractFactory(
       "VRFCoordinatorV2_5Mock"
     );
-    const vrfCoordinator = await VRFCoordinatorV2_5Mock.deploy(
-      ethers.parseUnits("0.25", "ether"), // _baseFee
-      ethers.parseUnits("1", "gwei"), // _gasPrice
-      ethers.parseUnits("1", 18) // _weiPerUnitLink
+    const mockVRFCoordinator = await MockVRFCoordinator.deploy(
+      BASE_FEE,
+      GAS_PRICE,
+      WEI_PER_UNIT_LINK
     );
 
-    // Deploy the Casino contract
-    const Casino = await ethers.getContractFactory("Casino");
-    const casino = await Casino.deploy(vrfCoordinator.getAddress());
+    const mockVRFCoordinatorAddress = await mockVRFCoordinator.getAddress();
 
-    // Retrieve the token address from the deployed casino contract
+    // Déployer le contrat de test NadCasino en utilisant l'adresse du MockVRFCoordinator
+    const NadCasino = await ethers.getContractFactory("NadCasino");
+    const casino = await NadCasino.deploy(mockVRFCoordinatorAddress);
+
+    // Attacher le token
     const tokenAddress = await casino.tokenAddress();
-    const CasinoToken = await ethers.getContractFactory("CasinoToken");
-    const token = CasinoToken.attach(tokenAddress);
+    const NadCasinoToken = await ethers.getContractFactory("NadCasinoToken");
+    const token = NadCasinoToken.attach(tokenAddress);
 
     return {
       casino,
       token,
       owner,
       user1,
-      user2,
-      tokenAddress,
-      VRFCoordinatorV2_5Mock: vrfCoordinator,
+      mockVRFCoordinator,
+      mockVRFCoordinatorAddress,
     };
   }
 
-  async function deployCasinoAndBuyTokensFixture() {
-    const { casino, token, owner, user1, user2 } = await loadFixture(
-      deployCasinoFixture
+  async function deployVRFCoordinatorAndCasinoFixture() {
+    const [owner, user1, user2] = await ethers.getSigners();
+
+    const BASE_FEE = "1000000000000000"; // 0.001 ether as base fee
+    const GAS_PRICE = "50000000000"; // 50 gwei
+    const WEI_PER_UNIT_LINK = "10000000000000000"; // 0.01 ether per LINK
+
+    // Deploy the MockVRFCoordinator
+    const MockVRFCoordinator = await ethers.getContractFactory(
+      "VRFCoordinatorV2_5Mock"
     );
-    const etherGiven = ethers.parseEther("1");
-    const numberOfTokens = 30000;
+    const mockVRFCoordinator = await MockVRFCoordinator.deploy(
+      BASE_FEE,
+      GAS_PRICE,
+      WEI_PER_UNIT_LINK
+    );
+
+    const mockVRFCoordinatorAddress = await mockVRFCoordinator.getAddress();
+
+    // Deploy the NadCasino contract using the MockVRFCoordinator address
+    const Casino = await ethers.getContractFactory("NadCasino");
+    const casino = await Casino.deploy(mockVRFCoordinatorAddress);
+
+    // Attach the token
+    const tokenAddress = await casino.tokenAddress();
+    const Token = await ethers.getContractFactory("NadCasinoToken");
+    const token = Token.attach(tokenAddress);
+
+    // Buy tokens for the user
     await casino
       .connect(user1)
-      .buyTokens(numberOfTokens, { value: etherGiven });
-    await casino
-      .connect(user2)
-      .buyTokens(numberOfTokens, { value: etherGiven });
+      .buyTokens(30000, { value: ethers.parseEther("1") });
 
     return {
       casino,
@@ -59,93 +83,111 @@ describe("Casino contract testing", function () {
       owner,
       user1,
       user2,
-      etherGiven,
-      numberOfTokens,
+      mockVRFCoordinator,
+      mockVRFCoordinatorAddress,
     };
   }
 
-  describe.only("Casino contract deployment testing", function () {
+  describe("NadCasino contract deployment testing", function () {
     it("Should return the correct decimals", async function () {
-      const { token } = await loadFixture(deployCasinoFixture);
+      const { token } = await loadFixture(deployVRFCoordinatorAndCasinoFixture);
       expect(await token.decimals()).to.equal(0);
     });
+
     it("Should set the right owner", async function () {
-      const { casino, owner } = await loadFixture(deployCasinoFixture);
+      const { casino, owner } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       expect(await casino.owner()).to.equal(owner.address);
     });
 
     it("Should not set another owner", async function () {
-      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+      const { casino, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       expect(await casino.owner()).to.not.equal(user1.address);
     });
 
     it("Should have initial token supply minted", async function () {
-      const { token } = await loadFixture(deployCasinoFixture);
+      const { token } = await loadFixture(deployVRFCoordinatorAndCasinoFixture);
       expect(await token.totalSupply()).to.equal(1000000);
     });
 
-    // take care it doesnt verify the initial token balance of the contract .. WIP
     it("Should have initial token balance", async function () {
-      const { token, tokenAddress, user1, owner } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+      const { token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
       );
-      // expect(await token.balanceOf(token.address)).to.equal(1000000);
-      // expect(await token.balanceOf(tokenAddress)).to.equal(1000000);
-      // expect(await token.balanceOf(token)).to.equal(1000000);
-      // expect(await token.balanceOf(owner)).to.equal(1000000);
-      expect(await token.balanceOf(user1)).to.equal(30000);
+      expect(await token.balanceOf(user1.address)).to.equal(30000);
     });
 
     it("Should have TOKEN_PRICE set correctly", async function () {
-      const { casino } = await loadFixture(deployCasinoFixture);
+      const { casino } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       expect(await casino.TOKEN_PRICE()).to.equal(TOKEN_PRICE);
     });
 
     it("Player totalGains should be 0 at deployment", async function () {
-      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+      const { casino, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       const player = await casino.players(user1.address);
       expect(player.totalGains).to.equal(0);
     });
 
     it("Player biggestWin should be 0 at deployment", async function () {
-      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+      const { casino, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       const player = await casino.players(user1.address);
       expect(player.biggestWin).to.equal(0);
     });
 
     it("Player nbGames should be 0 at deployment", async function () {
-      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+      const { casino, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       const player = await casino.players(user1.address);
       expect(player.nbGames).to.equal(0);
     });
 
     it("Player nbGamesWins should be 0 at deployment", async function () {
-      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+      const { casino, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       const player = await casino.players(user1.address);
       expect(player.nbGamesWins).to.equal(0);
     });
 
     it("Should have biggestSingleWinEver set to 0", async function () {
-      const { casino } = await loadFixture(deployCasinoFixture);
+      const { casino } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       expect(await casino.biggestSingleWinEver()).to.equal(0);
     });
 
     it("Should have biggestTotalWinEver set to 0", async function () {
-      const { casino } = await loadFixture(deployCasinoFixture);
+      const { casino } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       expect(await casino.biggestTotalWinEver()).to.equal(0);
     });
   });
 
-  describe("Buying tokens fonction", function () {
+  describe("Buying tokens function", function () {
     it("Should allow buying tokens with sufficient ETH", async function () {
-      const { casino, token, user1 } = await loadFixture(deployCasinoFixture);
+      const { casino, token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixtureBeforeTheBought
+      );
       const etherGiven = ethers.parseEther("1");
       await casino.connect(user1).buyTokens(30000, { value: etherGiven });
       expect(await token.balanceOf(user1.address)).to.equal(30000);
     });
 
     it("Should revert if the amount is less than the price of 10 tokens", async function () {
-      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+      const { casino, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       const etherGiven = ethers.parseEther("0.00003");
       await expect(
         casino.connect(user1).buyTokens(10, { value: etherGiven })
@@ -155,15 +197,19 @@ describe("Casino contract testing", function () {
     });
 
     it("Should revert if less than 10 tokens are bought", async function () {
-      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+      const { casino, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       const etherGiven = ethers.parseEther("1");
       await expect(
         casino.connect(user1).buyTokens(5, { value: etherGiven })
       ).to.be.revertedWith("You can not buy less than 10 tokens");
     });
 
-    it("Should revert if ETH send are not enough for this quantity of tokens", async function () {
-      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+    it("Should revert if ETH sent are not enough for this quantity of tokens", async function () {
+      const { casino, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       const etherGiven = ethers.parseEther("1");
       await expect(
         casino.connect(user1).buyTokens(50000, { value: etherGiven })
@@ -171,7 +217,9 @@ describe("Casino contract testing", function () {
     });
 
     it("Should revert if not enough tokens are available for purchase", async function () {
-      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+      const { casino, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       const etherGiven = ethers.parseEther("100");
       await expect(
         casino.connect(user1).buyTokens(3000000, { value: etherGiven })
@@ -179,7 +227,9 @@ describe("Casino contract testing", function () {
     });
 
     it("Should revert if the supply after the purchase is greater than 5%", async function () {
-      const { casino, user1 } = await loadFixture(deployCasinoFixture);
+      const { casino, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
       const etherGiven = ethers.parseEther("2");
       await expect(
         casino.connect(user1).buyTokens(60000, { value: etherGiven })
@@ -189,22 +239,19 @@ describe("Casino contract testing", function () {
 
   describe("Returning tokens", function () {
     it("Should return tokens if allowance is sufficient", async function () {
-      const { casino, token, user1, numberOfTokens } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+      const { casino, token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
       );
       await token.connect(user1).approve(casino, 10);
       await expect(casino.connect(user1).devolverTokens(10))
         .to.emit(casino, "PlayerWithdrewTokens")
         .withArgs(user1.address, 10);
-
-      expect(await token.balanceOf(user1.address)).to.equal(
-        numberOfTokens - 10
-      );
+      expect(await token.balanceOf(user1.address)).to.equal(29990);
     });
 
     it("Should revert if returning more tokens than owned", async function () {
       const { casino, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await expect(
         casino.connect(user1).devolverTokens(40000)
@@ -213,7 +260,7 @@ describe("Casino contract testing", function () {
 
     it("Should revert if returning zero tokens", async function () {
       const { casino, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await expect(casino.connect(user1).devolverTokens(0)).to.be.revertedWith(
         "You need to return a number of tokens greater than 0"
@@ -222,19 +269,18 @@ describe("Casino contract testing", function () {
 
     it("Should emit PlayerBecameInactive if player returns all tokens", async function () {
       const { casino, token, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await token.connect(user1).approve(casino, 30000);
       await expect(casino.connect(user1).devolverTokens(30000))
         .to.emit(casino, "PlayerBecameInactive")
         .withArgs(user1.address);
-
       expect(await token.balanceOf(user1.address)).to.equal(0);
     });
 
     it("Should revert if allowance is not set", async function () {
       const { casino, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await expect(casino.connect(user1).devolverTokens(10)).to.be.revertedWith(
         "Allowance not set or insufficient"
@@ -243,7 +289,7 @@ describe("Casino contract testing", function () {
 
     it("Should revert if allowance is less than the number of tokens to be returned", async function () {
       const { casino, token, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await token.connect(user1).approve(casino, 5);
       await expect(casino.connect(user1).devolverTokens(10)).to.be.revertedWith(
@@ -255,7 +301,7 @@ describe("Casino contract testing", function () {
   describe("Playing games", function () {
     it("Should revert if allowance is not set", async function () {
       const { casino, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await expect(casino.connect(user1).playGame(1, 10)).to.be.revertedWith(
         "Allowance not set or insufficient"
@@ -264,7 +310,7 @@ describe("Casino contract testing", function () {
 
     it("Should revert if allowance is less than the bet amount", async function () {
       const { casino, token, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await token.connect(user1).approve(casino, 5);
       await expect(casino.connect(user1).playGame(1, 10)).to.be.revertedWith(
@@ -274,38 +320,22 @@ describe("Casino contract testing", function () {
 
     it("Should play game if allowance is sufficient", async function () {
       const { casino, token, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await token.connect(user1).approve(casino, 10);
-
-      const tokenAdress = await token.getAddress();
-      const casinoAdress = await casino.getAddress();
-
-      console.log("lalalali : ", tokenAdress);
-      console.log("lalalalu : ", casinoAdress);
 
       // Jouer le jeu et obtenir le requestId
       const playGameTx = await casino.connect(user1).playGame(1, 10);
 
-      console.log("lalala : ", playGameTx);
-
-      // // Simuler la réponse VRF
-      // const randomWords = [12345];
-      // await mockVRFCoordinator.fulfillRandomWords(
-      //   requestId,
-      //   casino.address,
-      //   randomWords
-      // );
-
-      // // Vérifier que l'événement PlayerPlayedGame est émis avec les paramètres attendus
-      // await expect(playGameTx)
-      //   .to.emit(casino, "PlayerPlayedGame")
-      //   .withArgs(user1.address, 1, 10, 0);
+      // Vérifier que l'événement PlayerPlayedGame est émis avec les paramètres attendus
+      await expect(playGameTx)
+        .to.emit(casino, "PlayerPlayedGame")
+        .withArgs(user1.address, 1, 10, 0);
     });
 
     it("Should play game type 1 and lose tokens", async function () {
       const { casino, token, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       const betAmount = 3;
 
@@ -319,7 +349,7 @@ describe("Casino contract testing", function () {
 
     it("Should play game type 1 and check the event for loss", async function () {
       const { casino, token, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       const betAmount = 3;
 
@@ -332,7 +362,7 @@ describe("Casino contract testing", function () {
 
     it("Should play game type 1 multiple times and check the event for win", async function () {
       const { casino, token, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       const betAmount = 3;
 
@@ -357,7 +387,7 @@ describe("Casino contract testing", function () {
 
     it("Should play game type 2 and lose tokens", async function () {
       const { casino, token, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       const betAmount = 3;
 
@@ -371,7 +401,7 @@ describe("Casino contract testing", function () {
 
     it("Should play game type 2 and check the event for loss", async function () {
       const { casino, token, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       const betAmount = 6;
 
@@ -384,7 +414,7 @@ describe("Casino contract testing", function () {
 
     it("Should play game type 2 multiple times and check the event for win", async function () {
       const { casino, token, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       const betAmount = 3;
 
@@ -409,7 +439,7 @@ describe("Casino contract testing", function () {
 
     it("Should revert if bet amount is zero", async function () {
       const { casino, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await expect(casino.connect(user1).playGame(1, 0)).to.be.revertedWith(
         "Bet amount must be greater than zero"
@@ -418,7 +448,7 @@ describe("Casino contract testing", function () {
 
     it("Should revert if bet amount is more than player's balance", async function () {
       const { casino, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await expect(casino.connect(user1).playGame(1, 40000)).to.be.revertedWith(
         "Insufficient tokens balance"
@@ -427,7 +457,7 @@ describe("Casino contract testing", function () {
 
     it("Should revert if game type is invalid", async function () {
       const { casino, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await expect(casino.connect(user1).playGame(3, 3)).to.be.revertedWith(
         "Invalid game type"
@@ -436,7 +466,7 @@ describe("Casino contract testing", function () {
 
     it("Should revert if bet amount for game type 2 is not a multiple of 3", async function () {
       const { casino, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await expect(casino.connect(user1).playGame(2, 4)).to.be.revertedWith(
         "Bet amount for gameType 2 must be a multiple of 3 tokens"
@@ -445,7 +475,7 @@ describe("Casino contract testing", function () {
 
     it("Should emit PlayerPlayedGame when player plays a game", async function () {
       const { casino, user1, token } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
 
       await token.connect(user1).approve(casino, 3);
@@ -456,7 +486,7 @@ describe("Casino contract testing", function () {
 
     it("Should update the number of games played when player plays a game", async function () {
       const { casino, user1, token } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await token.connect(user1).approve(casino, 3);
       await casino.connect(user1).playGame(1, 3);
@@ -466,7 +496,7 @@ describe("Casino contract testing", function () {
 
     it("Should update player variables and global variables on win", async function () {
       const { casino, token, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       const betAmount = 3;
       const payoutMultiplier = 10;
@@ -503,7 +533,7 @@ describe("Casino contract testing", function () {
 
     it("Should update biggestTotalWinEver when a new player surpasses previous totalGains", async function () {
       const { casino, token, user1, user2 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       const betAmount = 3;
       const payoutMultiplierGame1 = 10;
@@ -564,7 +594,7 @@ describe("Casino contract testing", function () {
 
     it("Should update player1 and global variables after multiple wins", async function () {
       const { casino, token, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       const betAmount1 = 3;
       const betAmount2 = 5;
@@ -637,16 +667,17 @@ describe("Casino contract testing", function () {
   describe("Solvency check", function () {
     it("Should revert if contract cannot pay potential win in tokens", async function () {
       const { casino, user1, token } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await token.connect(user1).approve(casino, 30000);
       await expect(casino.connect(user1).playGame(2, 30000)).to.be.revertedWith(
         "Contract cannot pay potential win in tokens"
       );
     });
+
     it("Should revert if contract cannot pay potential win in Ether", async function () {
       const { casino, user1, token } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await token.connect(user1).approve(casino, 10000);
       await expect(casino.connect(user1).playGame(1, 10000)).to.be.revertedWith(
@@ -658,66 +689,61 @@ describe("Casino contract testing", function () {
   describe("Withdraw ETH", function () {
     it("Should allow owner to withdraw ETH", async function () {
       const { casino, owner } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await expect(casino.connect(owner).withdrawEth(1)).to.changeEtherBalance(
         owner,
         ethers.parseEther("1.0")
       );
     });
-    it("Should revert when non authorized user tries to to withdraw ETH", async function () {
+
+    it("Should revert when non-authorized user tries to withdraw ETH", async function () {
       const { casino, user1 } = await loadFixture(
-        deployCasinoAndBuyTokensFixture
+        deployVRFCoordinatorAndCasinoFixture
       );
       await expect(casino.connect(user1).withdrawEth(1)).to.be.reverted;
     });
 
     it("Should revert if not enough ETH in reserve", async function () {
-      const { casino } = await loadFixture(deployCasinoFixture);
+      const { casino } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixtureBeforeTheBought
+      );
       await expect(casino.withdrawEth(1)).to.be.revertedWith(
         "Not enough ETH in reserve"
       );
     });
   });
 
-  // describe.only("Fallback function", function () {
-  //   it("Should revert when called with data", async function () {
-  //     const { casino, user1 } = await loadFixture(deployCasinoFixture);
-
-  //     await expect(
-  //       user1.sendTransaction({
-  //         to: casino.address,
-  //         data: "0x1234", // Sending some arbitrary data
-  //         value: ethers.parseEther("0.1"), // Sending some Ether as well
-  //       })
-  //     ).to.be.revertedWith("Fallback function does not accept calls with data");
-  //   });
-  // });
-
   describe("Mint function", function () {
-    it("Should revert when a non authorized user tries to mint", async function () {
-      const { token, user1 } = await loadFixture(deployCasinoFixture);
-      await expect(token.connect(user1).mint(user1, 10000000)).to.be.reverted;
+    it("Should revert when a non-authorized user tries to mint", async function () {
+      const { token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
+      await expect(token.connect(user1).mint(user1.address, 10000000)).to.be
+        .reverted;
     });
   });
 
   describe("Receive function", function () {
     it("Should revert when Ether is sent directly to the contract", async function () {
-      const { casino, owner } = await loadFixture(deployCasinoFixture);
+      const { casino, owner } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
 
       await expect(
         owner.sendTransaction({
-          to: casino,
+          to: casino.getAddress(),
           value: ethers.parseEther("1.0"),
         })
       ).to.be.revertedWith("Contract does not accept plain Ether transfers");
     });
   });
 
-  describe("VRF", async function () {
+  describe("VRF", function () {
     it("Should correctly handle a VRF response for a winning game", async function () {
-      const { casino, token, user1, VRFCoordinatorV2_5Mock } =
-        await loadFixture(deployCasinoAndBuyTokensFixture);
+      const { casino, token, user1, mockVRFCoordinator } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
 
       await token.connect(user1).approve(casino, 10);
 
@@ -732,11 +758,9 @@ describe("Casino contract testing", function () {
 
       // Simuler une réponse VRF gagnante
       const winningNumber = 0; // Assurez-vous que ce nombre correspond à une victoire dans votre logique
-      await VRFCoordinatorV2_5Mock.fulfillRandomWords(
-        requestId,
-        casino.address,
-        [winningNumber]
-      );
+      await mockVRFCoordinator.fulfillRandomWords(requestId, casino, [
+        winningNumber,
+      ]);
 
       // Vérifier que le joueur a gagné
       const player = await casino.players(user1.address);
