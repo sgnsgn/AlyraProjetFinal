@@ -106,4 +106,9 @@ Below are the tests performed to ensure the proper functioning of the `NadCasino
 | All files                     | 92.98      | 86.76      | 88.89      | 89.87      |                  |
 | ----------------------------- | ---------- | ---------- | ---------- | ---------- | ---------------- |
 
-## Screenshot
+## Screenshot  
+  
+![Tests_NadCasino sol](https://github.com/user-attachments/assets/8153d495-0ab8-4de5-bc82-b035d937b9e6)
+
+
+  
