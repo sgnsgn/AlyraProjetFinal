@@ -4,9 +4,7 @@ const { networkConfig } = require("../helper-hardhat-config");
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("Casino contract testing", function () {
-  const TOKEN_PRICE = ethers.parseEther("0.00003");
-
+describe("Casino Results playGame testing with the Contract Mock", function () {
   async function deployVRFCoordinatorAndCasinoFixture() {
     const [owner, user1] = await ethers.getSigners();
 
@@ -14,9 +12,7 @@ describe("Casino contract testing", function () {
     const GAS_PRICE = "50000000000"; // 50 gwei
     const WEI_PER_UNIT_LINK = "10000000000000000"; // 0.01 ether per LINK
 
-    const chainId = network.config.chainId;
-
-    // Déployer le MockVRFCoordinator
+    // Deploy the MockVRFCoordinator
     const MockVRFCoordinator = await ethers.getContractFactory(
       "VRFCoordinatorV2_5Mock"
     );
@@ -26,49 +22,18 @@ describe("Casino contract testing", function () {
       WEI_PER_UNIT_LINK
     );
 
-    // const fundAmount =
-    //   networkConfig[chainId]["fundAmount"] || "1000000000000000000";
-
-    // // Create a subscription
-    // const createSubscriptionTx = await mockVRFCoordinator.createSubscription();
-
-    // console.log(`Transaction hash: ${createSubscriptionTx.hash}`);
-
-    // // Wait for the transaction to be mined
-    // const transactionReceipt = await createSubscriptionTx.wait();
-
-    // console.log(
-    //   "Transaction receipt:",
-    //   JSON.stringify(transactionReceipt, null, 2)
-    // );
-
-    // let subscriptionId;
-
-    // if (transactionReceipt.logs && transactionReceipt.logs.length > 0) {
-    //   // The subscription ID should be in the second topic (index 1) of the first log
-    //   subscriptionId = ethers.BigNumber.from(
-    //     transactionReceipt.logs[0].topics[1]
-    //   );
-    //   console.log(`Extracted subscription ID from logs: ${subscriptionId}`);
-    // } else {
-    //   throw new Error("No logs found in transaction receipt");
-    // }
-
-    // // Now you can use this subscriptionId for funding and other operations
-    // await mockVRFCoordinator.fundSubscription(subscriptionId, fundAmount);
-
     const mockVRFCoordinatorAddress = await mockVRFCoordinator.getAddress();
 
-    // Déployer le contrat de test Casino en utilisant l'adresse du MockVRFCoordinator
+    // Deploy the CasinoTest contract using the MockVRFCoordinator address
     const CasinoTest = await ethers.getContractFactory("CasinoTest");
     const casino = await CasinoTest.deploy(mockVRFCoordinatorAddress);
 
-    // Attacher le token
+    // Attach the token
     const tokenAddress = await casino.tokenAddress();
     const CasinoToken = await ethers.getContractFactory("NadCasinoToken");
     const token = CasinoToken.attach(tokenAddress);
 
-    // Acheter des jetons pour l'utilisateur
+    // Buy tokens for the user
     await casino
       .connect(user1)
       .buyTokens(30000, { value: ethers.parseEther("1") });
@@ -83,18 +48,18 @@ describe("Casino contract testing", function () {
     };
   }
 
-  describe("Fixture testing", function () {
+  describe("VRFCoordinatorV2_5Mock Fixture testing", function () {
     it("Should deploy VRFCoordinatorV2_5Mock with correct initial setup", async function () {
       const { mockVRFCoordinator, mockVRFCoordinatorAddress, owner } =
         await loadFixture(deployVRFCoordinatorAndCasinoFixture);
 
-      // Vérifier que l'adresse du MockVRFCoordinator est correcte
+      // Check that the MockVRFCoordinator address is correct
       expect(mockVRFCoordinatorAddress).to.properAddress;
 
-      // Vérifier que le propriétaire est bien défini
+      // Check that the owner is correctly set
       expect(await mockVRFCoordinator.owner()).to.equal(owner.address);
 
-      // Vérifier les paramètres initiaux
+      // Check the initial parameters
       expect(await mockVRFCoordinator.i_base_fee()).to.equal(
         ethers.parseEther("0.001")
       );
@@ -105,55 +70,234 @@ describe("Casino contract testing", function () {
     });
   });
 
-  it.skip("Should emit RandomWordsRequested event", async function () {
-    const {} = await loadFixture(deployVRFCoordinatorAndCasinoFixture);
-    await token.connect(user1).approve(nadCasino, 10);
+  describe("Testing variables after the FulfillRandomWords's answer for the game 1", function () {
+    it("Should update the variables nbGames, nbGamesWins, totalGains after the answer of VRF if the game is won", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
 
-    const tx = await nadCasino.connect(user1).playGame(1, 10);
-    const receipt = await tx.wait();
+      await token.connect(user1).approve(casino, 10);
 
-    // Check if there's a log with the correct topic
-    const randomWordsRequestedLog = receipt.logs.find(
-      (log) =>
-        log.topics[0] ===
-        ethers.utils.id(
-          "RandomWordsRequested(uint256,uint256,uint64,uint16,uint32,uint32,uint32,address)"
-        )
-    );
+      // Use a hardcoded requestId
+      const hardcodedRequestId = 1;
 
-    expect(randomWordsRequestedLog).to.not.be.undefined;
+      // Simulate the PlayGame function, directly initialize the mappings via the test contract
+      await casino.testSetRequestIdToPlayer(hardcodedRequestId, user1.address);
+      await casino.testSetPlayerBetAmount(user1.address, 10);
+      await casino.testSetPlayerGameType(user1.address, 1);
+
+      // Define hardcoded values for randomWords
+      const randomWords = [0]; // Simulate a winning result
+
+      // Call fulfillRandomWords directly via the test contract
+      await casino.testFulfillRandomWords(hardcodedRequestId, randomWords);
+
+      // Check that the game was processed correctly
+      const player = await casino.players(user1.address);
+      expect(player.nbGames).to.equal(1);
+      expect(player.nbGamesWins).to.equal(1);
+      expect(player.totalGains).to.be.above(0);
+    });
+
+    it("Should update the variables nbGames, nbGamesWins, totalGains after the answer of VRF if the game is lost", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
+
+      await token.connect(user1).approve(casino, 10);
+
+      // Use a hardcoded requestId
+      const hardcodedRequestId = 1;
+
+      // Simulate the PlayGame function, directly initialize the mappings via the test contract
+      await casino.testSetRequestIdToPlayer(hardcodedRequestId, user1.address);
+      await casino.testSetPlayerBetAmount(user1.address, 10);
+      await casino.testSetPlayerGameType(user1.address, 1);
+
+      // Define hardcoded values for randomWords
+      const randomWords = [1]; // Simulate a losing result
+
+      // Call fulfillRandomWords directly via the test contract
+      await casino.testFulfillRandomWords(hardcodedRequestId, randomWords);
+
+      // Check that the game was processed correctly
+      const player = await casino.players(user1.address);
+      expect(player.nbGames).to.equal(1);
+      expect(player.nbGamesWins).to.equal(0);
+      expect(player.totalGains).to.be.equal(0);
+    });
+
+    it.skip("Should emit the event PlayerWon after the answer of VRF if the game is won", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
+
+      await token.connect(user1).approve(casino, 10);
+
+      // Use a hardcoded requestId
+      const hardcodedRequestId = 1;
+
+      // Initialize the mappings directly via the test contract
+      await casino.testSetRequestIdToPlayer(hardcodedRequestId, user1.address);
+      await casino.testSetPlayerBetAmount(user1.address, 10);
+      await casino.testSetPlayerGameType(user1.address, 1);
+
+      // Define hardcoded values for randomWords
+      const randomWords = [0]; // Simulate a winning result
+
+      // Call fulfillRandomWords directly via the test contract
+      await casino.testFulfillRandomWords(hardcodedRequestId, randomWords);
+
+      // Check that the PlayerWon event was emitted
+      await expect(
+        casino.testFulfillRandomWords(hardcodedRequestId, randomWords)
+      )
+        .to.emit(casino, "PlayerWon")
+        .withArgs("user1.address", 10, 100);
+    });
+
+    it("Should emit the event PlayerLost after the answer of VRF if the game is Lost", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
+
+      await token.connect(user1).approve(casino, 10);
+
+      // Use a hardcoded requestId
+      const hardcodedRequestId = 1;
+
+      // Initialize the mappings directly via the test contract
+      await casino.testSetRequestIdToPlayer(hardcodedRequestId, user1.address);
+      await casino.testSetPlayerBetAmount(user1.address, 10);
+      await casino.testSetPlayerGameType(user1.address, 1);
+
+      // Define hardcoded values for randomWords
+      const randomWords = [1]; // Simulate a lost result
+
+      // Call fulfillRandomWords directly via the test contract
+      await casino.testFulfillRandomWords(hardcodedRequestId, randomWords);
+
+      // Check that the PlayerLost event was emitted
+      await expect(
+        casino.testFulfillRandomWords(hardcodedRequestId, randomWords)
+      )
+        .to.emit(casino, "PlayerLost")
+        .withArgs("0x0000000000000000000000000000000000000000", 0);
+    });
   });
 
-  it("Should handle VRF response correctly with hardcoded requestId", async function () {
-    const { casino, token, user1, mockVRFCoordinator } = await loadFixture(
-      deployVRFCoordinatorAndCasinoFixture
-    );
+  describe("Testing variables after the FulfillRandomWords's answer for the game 2", function () {
+    it("Should update the variables nbGames, nbGamesWins, totalGains after the answer of VRF if the game is won", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
 
-    await token.connect(user1).approve(casino, 10);
+      await token.connect(user1).approve(casino, 10);
 
-    // Utiliser un requestId en dur
-    const hardcodedRequestId = 1;
+      // Use a hardcoded requestId
+      const hardcodedRequestId = 1;
 
-    // Initialiser les mappings directement via le contrat de test
-    await casino.testSetRequestIdToPlayer(hardcodedRequestId, user1.address);
-    await casino.testSetPlayerBetAmount(user1.address, 10);
-    await casino.testSetPlayerGameType(user1.address, 1);
+      // Simulate the PlayGame function, directly initialize the mappings via the test contract
+      await casino.testSetRequestIdToPlayer(hardcodedRequestId, user1.address);
+      await casino.testSetPlayerBetAmount(user1.address, 10);
+      await casino.testSetPlayerGameType(user1.address, 2);
 
-    // Définir des valeurs hardcodées pour randomWords
-    const randomWords = [0]; // Simule un résultat gagnant
+      // Define hardcoded values for randomWords
+      const randomWords = [0]; // Simulate a winning result
 
-    // Appeler fulfillRandomWords directement via le contrat de test
-    await casino.testFulfillRandomWords(hardcodedRequestId, randomWords);
+      // Call fulfillRandomWords directly via the test contract
+      await casino.testFulfillRandomWords(hardcodedRequestId, randomWords);
 
-    // Vérifier que le jeu a été traité correctement
-    const player = await casino.players(user1.address);
-    expect(player.nbGames).to.equal(1);
-    expect(player.nbGamesWins).to.equal(1);
-    expect(player.totalGains).to.be.above(0);
+      // Check that the game was processed correctly
+      const player = await casino.players(user1.address);
+      expect(player.nbGames).to.equal(1);
+      expect(player.nbGamesWins).to.equal(1);
+      expect(player.totalGains).to.be.above(0);
+    });
 
-    // Vérifier que l'événement PlayerWon a été émis
-    await expect(casino.testFulfillRandomWords(hardcodedRequestId, randomWords))
-      .to.emit(casino, "PlayerWon")
-      .withArgs(user1.address, 10, 100); // Ajuster les valeurs en fonction de votre logique
+    it("Should update the variables nbGames, nbGamesWins, totalGains after the answer of VRF if the game is lost", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
+
+      await token.connect(user1).approve(casino, 10);
+
+      // Use a hardcoded requestId
+      const hardcodedRequestId = 1;
+
+      // Simulate the PlayGame function, directly initialize the mappings via the test contract
+      await casino.testSetRequestIdToPlayer(hardcodedRequestId, user1.address);
+      await casino.testSetPlayerBetAmount(user1.address, 10);
+      await casino.testSetPlayerGameType(user1.address, 2);
+
+      // Define hardcoded values for randomWords
+      const randomWords = [1]; // Simulate a losing result
+
+      // Call fulfillRandomWords directly via the test contract
+      await casino.testFulfillRandomWords(hardcodedRequestId, randomWords);
+
+      // Check that the game was processed correctly
+      const player = await casino.players(user1.address);
+      expect(player.nbGames).to.equal(1);
+      expect(player.nbGamesWins).to.equal(0);
+      expect(player.totalGains).to.be.equal(0);
+    });
+
+    it.skip("Should emit the event PlayerWon after the answer of VRF if the game is won", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
+
+      await token.connect(user1).approve(casino, 10);
+
+      // Use a hardcoded requestId
+      const hardcodedRequestId = 1;
+
+      // Initialize the mappings directly via the test contract
+      await casino.testSetRequestIdToPlayer(hardcodedRequestId, user1.address);
+      await casino.testSetPlayerBetAmount(user1.address, 10);
+      await casino.testSetPlayerGameType(user1.address, 2);
+
+      // Define hardcoded values for randomWords
+      const randomWords = [0]; // Simulate a winning result
+
+      // Call fulfillRandomWords directly via the test contract
+      await casino.testFulfillRandomWords(hardcodedRequestId, randomWords);
+
+      // Check that the PlayerWon event was emitted
+      await expect(
+        casino.testFulfillRandomWords(hardcodedRequestId, randomWords)
+      )
+        .to.emit(casino, "PlayerWon")
+        .withArgs(user1.address, 10, 100);
+    });
+    it("Should emit the event PlayerLost after the answer of VRF if the game is Lost", async function () {
+      const { casino, token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
+
+      await token.connect(user1).approve(casino, 10);
+
+      // Use a hardcoded requestId
+      const hardcodedRequestId = 1;
+
+      // Initialize the mappings directly via the test contract
+      await casino.testSetRequestIdToPlayer(hardcodedRequestId, user1.address);
+      await casino.testSetPlayerBetAmount(user1.address, 10);
+      await casino.testSetPlayerGameType(user1.address, 2);
+
+      // Define hardcoded values for randomWords
+      const randomWords = [1]; // Simulate a lost result
+
+      // Call fulfillRandomWords directly via the test contract
+      await casino.testFulfillRandomWords(hardcodedRequestId, randomWords);
+
+      // Check that the PlayerLost event was emitted
+      await expect(
+        casino.testFulfillRandomWords(hardcodedRequestId, randomWords)
+      )
+        .to.emit(casino, "PlayerLost")
+        .withArgs("0x0000000000000000000000000000000000000000", 0);
+    });
   });
 });

@@ -158,9 +158,8 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
                 biggestTotalWinEver = players[player].totalGains;
             }
 
-            token.transfer(player, winAmount);
-
             emit PlayerWon(player, betAmount, winAmount);
+            token.transfer(player, winAmount);
         } else {
             emit PlayerLost(player, betAmount);
         }
