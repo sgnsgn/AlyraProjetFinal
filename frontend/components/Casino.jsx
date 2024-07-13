@@ -55,7 +55,7 @@ const Casino = ({ address }) => {
       const randomWordsRequestedEvents = await publicClient.getLogs({
         address: contractCasinoAddress,
         event: parseAbiItem(
-          "event RandomWordsRequested(uint256 indexed requestId,address indexed player,uint256 gameType,uint256 betAmount)"
+          "event RandomWordsRequested(uint256 indexed requestId, address indexed player, uint256 gameType, uint256 betAmount)"
         ),
         fromBlock: 6303800n,
         toBlock: "latest",
@@ -184,13 +184,13 @@ const Casino = ({ address }) => {
         })),
       ];
 
-      if (playerWonEvents.length > 0) {
-        setPlayerWonEvent(playerWonEvents[playerWonEvents.length - 1]);
-      }
+      // if (playerWonEvents.length > 0) {
+      //   setPlayerWonEvent(playerWonEvents[playerWonEvents.length - 1]);
+      // }
 
-      if (playerLostEvents.length > 0) {
-        setPlayerLostEvent(playerLostEvents[playerLostEvents.length - 1]);
-      }
+      // if (playerLostEvents.length > 0) {
+      //   setPlayerLostEvent(playerLostEvents[playerLostEvents.length - 1]);
+      // }
 
       combinedEvents.sort((a, b) => b.blockNumber - a.blockNumber);
 

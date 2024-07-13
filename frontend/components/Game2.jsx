@@ -95,7 +95,6 @@ const Game2 = ({
   const handlePlayGame = async () => {
     if (approveSuccess) {
       try {
-        setSpinning(true);
         setResult(null);
         playGame({
           address: casinoAddress,
@@ -126,6 +125,12 @@ const Game2 = ({
       });
     }
   }, [isApproveSuccess, toast]);
+
+  useEffect(() => {
+    if (isPlayLoading) {
+      setSpinning(true);
+    }
+  }, [isPlayLoading]);
 
   useEffect(() => {
     if (isPlaySuccess) {

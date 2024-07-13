@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useWatchContractEvent,
+} from "wagmi";
 import { useToast } from "./ui/use-toast";
 import ToastManager from "./ToastManager";
 import "../app/blink.css";
@@ -43,6 +47,26 @@ const Game1 = ({
     useWaitForTransactionReceipt({
       hash: playGameHash,
     });
+
+  useWatchContractEvent({
+    address: casinoAddress,
+    abi: casinoAbi,
+    eventName: "PlayerWon",
+    onLogs(logs) {
+      setResult({ won: true, logs });
+      setSpinning(false);
+    },
+  });
+
+  useWatchContractEvent({
+    address: casinoAddress,
+    abi: casinoAbi,
+    eventName: "PlayerLost",
+    onLogs(logs) {
+      setResult({ won: false, logs });
+      setSpinning(false);
+    },
+  });
 
   const handleApprove = async () => {
     if (!isNaN(betAmount) && betAmount > 0) {
@@ -105,19 +129,20 @@ const Game1 = ({
   useEffect(() => {
     if (isPlaySuccess) {
       setApproveSuccess(false);
+      setRefresh((prev) => !prev);
       setBetAmount("");
       setSpinning(false);
     }
-  }, [isPlaySuccess]);
+  }, [isPlaySuccess, setRefresh]);
 
   useEffect(() => {
     if (playerWonEvent || playerLostEvent) {
-      setSpinning(false);
       if (playerWonEvent) {
         setResult({ won: true });
       } else if (playerLostEvent) {
         setResult({ won: false });
       }
+      setSpinning(false);
       setRefresh((prev) => !prev);
     }
   }, [playerWonEvent, playerLostEvent, setRefresh, setSpinning, setResult]);
