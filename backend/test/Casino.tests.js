@@ -376,10 +376,13 @@ describe("NadCasino contract testing", function () {
   describe("Solvency check", function () {
     it("Should revert if contract cannot pay potential win in tokens", async function () {
       const { casino, user1, token } = await loadFixture(
-        deployVRFCoordinatorAndCasinoFixture
+        deployVRFCoordinatorAndCasinoFixtureBeforeTheBought
       );
-      await token.connect(user1).approve(casino, 30000);
-      await expect(casino.connect(user1).playGame(2, 30000)).to.be.revertedWith(
+      await casino
+        .connect(user1)
+        .buyTokens(50000, { value: ethers.parseEther("1.5") });
+      await token.connect(user1).approve(casino, 50000);
+      await expect(casino.connect(user1).playGame(2, 49995)).to.be.revertedWith(
         "Contract cannot pay potential win in tokens"
       );
     });

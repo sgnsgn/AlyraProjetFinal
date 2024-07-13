@@ -9,7 +9,7 @@ import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/V
 
 /**
  * @title NadCasino Smart Contract
- * @author sgnsgn
+ * @author sgnsgn (Alyra's Student)
  * @notice This contract implements a casino game using Chainlink VRF for randomness
  * @dev Inherits from ReentrancyGuard and VRFConsumerBaseV2Plus
  */
@@ -35,14 +35,16 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     // number of confirmations required for the VRF request
     uint16 requestConfirmations = 3;
 
-    //
+    // NadCasinoToken's future instance
     NadCasinoToken private token;
-    //
+
+    // Constant Token Price
     uint256 public constant TOKEN_PRICE = 0.00003 ether;
-    //
+
+    // Token address
     address public tokenAddress;
 
-    // Player struct
+    // Player structure (totalGains, biggestWin, nbGames, nbGamesWins)
     struct Player {
         uint256 totalGains; // Total gains accumulated by the player
         uint256 biggestWin; // Biggest single win amount by the player
@@ -50,7 +52,7 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         uint256 nbGamesWins; // Number of games won by the player
     }
 
-    //
+    // Mapping of players
     mapping(address => Player) public players;
 
     // Mappings for the interaction with Chainlink VRF
@@ -104,6 +106,12 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         tokenAddress = address(token);
     }
 
+    /**
+     * @notice Requests random words from Chainlink VRF
+     * @param _numWords Number of random words requested
+     * @return requestId The ID of the request
+     * @dev Function to request randomness from Chainlink VRF
+     */
     function requestRandomWords(
         uint32 _numWords
     ) private returns (uint256 requestId) {
@@ -122,10 +130,10 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     }
 
     /**
-    /// @notice Fulfills the random words request from Chainlink VRF
-    /// @param requestId The ID of the request
-    /// @param randomWords The array of random words received
-    /// @dev Internal function called by Chainlink VRF
+     * @notice Fulfills the random words request from Chainlink VRF
+     * @param requestId The ID of the request
+     * @param randomWords The array of random words received
+     * @dev Function called by Chainlink VRF for setting the random words
      */
     function fulfillRandomWords(
         uint256 requestId,
@@ -135,7 +143,7 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         uint256 betAmount = playerBetAmount[player];
         uint256 gameType = playerGameType[player];
 
-        uint256 payoutMultiplier = gameType == 1 ? 10 : 50;
+        uint256 payoutMultiplier = gameType == 1 ? 7 : 20;
         uint256 payoutProbability = gameType == 1 ? 9 : 25;
 
         uint256 result = randomWords[0] % payoutProbability;
@@ -174,15 +182,20 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         delete playerGameType[player];
     }
 
+    /**
+     * @notice Converts tokens to ETH
+     * @param _numTokens The number of tokens
+     * @dev Function to convert tokens to ETH
+     */
     function convertTokens(uint256 _numTokens) internal pure returns (uint256) {
         return _numTokens * TOKEN_PRICE;
     }
 
     /**
-    /// @notice Allows a player to buy tokens with ETH
-    /// @param _numTokens The number of tokens to buy
-    /// @dev Checks for minimum purchase, correct ETH amount, and ownership limits
-    */
+     * @notice Allows a player to buy tokens with ETH
+     * @param _numTokens The number of tokens to buy
+     * @dev Checks for minimum purchase, correct ETH amount, balance of the contract and ownership limits
+     */
     function buyTokens(uint256 _numTokens) external payable nonReentrant {
         require(_numTokens >= 10, "You can not buy less than 10 tokens");
         require(
@@ -193,12 +206,10 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
             msg.value >= convertTokens(_numTokens),
             "You need more eth for this quantity of tokens"
         );
-        // Check if the contract has enough tokens for the purchase
         require(
             token.balanceOf(address(this)) >= _numTokens,
             "Not enough tokens available for purchase"
         );
-        // Check if the buyer would own more than 5% of the total supply
         require(
             token.balanceOf(msg.sender) + _numTokens <=
                 ((token.totalSupply() * 5) / 100),
@@ -213,9 +224,9 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     }
 
     /**
-    /// @notice Allows a player to return tokens and receive ETH
-    /// @param _numTokens The number of tokens to return
-    /// @dev Checks token balance and allowance before transfer
+     * @notice Allows a player to return tokens and receive ETH
+     * @param _numTokens The number of tokens to return
+     * @dev Checks token balance, contract balance and allowance before transfer
      */
     function devolverTokens(uint256 _numTokens) external nonReentrant {
         require(
@@ -236,14 +247,10 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
             "Insufficient ETH balance in contract to pay for returned tokens"
         );
 
-        // Effects: Transfer tokens to the Smart Contract
         token.transferFrom(msg.sender, address(this), _numTokens);
 
-        // Effects: Emit event for token withdrawal
         emit PlayerWithdrewTokens(msg.sender, _numTokens);
 
-        // Interactions: Transfer ethers to the user
-        // payable(msg.sender).transfer(convertTokens(_numTokens));
         (bool successSendEth, ) = msg.sender.call{
             value: convertTokens(_numTokens)
         }("");
@@ -257,10 +264,10 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     }
 
     /**
-    /// @notice Initiates a game play
-    /// @param gameType The type of game to play (1 or 2)
-    /// @param betAmount The amount of tokens to bet
-    /// @dev Requests random words from Chainlink VRF
+     * @notice Initiates a game play
+     * @param gameType The type of game to play (1 or 2)
+     * @param betAmount The amount of tokens to bet
+     * @dev Requests random words from Chainlink VRF
      */
     function playGame(
         uint256 gameType,
@@ -281,11 +288,10 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
             "Allowance not set or insufficient"
         );
 
-        uint256 payoutMultiplier = gameType == 1 ? 10 : 50;
+        uint256 payoutMultiplier = gameType == 1 ? 7 : 20;
         uint256 potentialWinTokens = betAmount * payoutMultiplier;
         checkContractSolvency(potentialWinTokens, msg.sender);
 
-        // Deduct the tokens to the buyer
         token.transferFrom(msg.sender, address(this), betAmount);
 
         uint256 requestId = requestRandomWords(1);
@@ -297,10 +303,9 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     }
 
     /**
-    /// @notice Checks if the contract has enough tokens to pay the potential win
-    /// @param _potentialWinTokens The amount of tokens to pay
-    /// @param _playerAddress The address of the player
-    /// @dev Checks if the contract has enough tokens to pay the potential win
+     * @notice Checks if the contract has enough tokens to pay the potential win
+     * @param _potentialWinTokens The amount of tokens to pay
+     * @param _playerAddress The address of the player
      */
     function checkContractSolvency(
         uint256 _potentialWinTokens,
@@ -320,11 +325,10 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     }
 
     /**
-    /// @notice Withdraws ETH from the contract
-    /// @param amount The amount of ETH to withdraw
-    /// @dev Withdraws ETH from the contract
+     * @notice Withdraws ETH from the contract (OnlyOwner)
+     * @param amount The amount of ETH to withdraw
      */
-    function withdrawEth(uint256 amount) public onlyOwner nonReentrant {
+    function withdrawEth(uint256 amount) external onlyOwner {
         require(
             address(this).balance >= amount * 1 ether,
             "Not enough ETH in reserve"
@@ -336,16 +340,14 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     }
 
     /**
-    /// @notice Fallback function
-    /// @dev Fallback function
+     * @notice Fallback function (No calls with data available)
      */
     fallback() external payable {
         revert("Fallback function does not accept calls with data");
     }
 
     /**
-    /// @notice Receive function
-    /// @dev Receive function
+     * @notice Receive function (No ETH direct transfers)
      */
     receive() external payable {
         revert("Contract does not accept plain Ether transfers");
