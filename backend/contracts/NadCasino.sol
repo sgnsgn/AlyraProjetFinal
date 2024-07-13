@@ -56,7 +56,7 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     // Mappings for the interaction with Chainlink VRF
     mapping(uint256 => address) public requestIdToPlayer;
     mapping(address => uint256) public playerBetAmount;
-    mapping(address => uint8) public playerGameType;
+    mapping(address => uint256) public playerGameType;
 
     // Globals variables
     uint256 public biggestSingleWinEver;
@@ -67,12 +67,12 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     event RandomWordsRequested(
         uint256 indexed requestId,
         address indexed player,
-        uint8 gameType,
+        uint256 gameType,
         uint256 betAmount
     );
     event PlayerPlayedGame(
         address indexed player,
-        uint8 gameType,
+        uint256 gameType,
         uint256 betAmount,
         uint256 winAmount
     );
@@ -133,7 +133,7 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     ) internal override {
         address player = requestIdToPlayer[requestId];
         uint256 betAmount = playerBetAmount[player];
-        uint8 gameType = playerGameType[player];
+        uint256 gameType = playerGameType[player];
 
         uint256 payoutMultiplier = gameType == 1 ? 10 : 50;
         uint256 payoutProbability = gameType == 1 ? 9 : 25;
@@ -262,7 +262,10 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     /// @param betAmount The amount of tokens to bet
     /// @dev Requests random words from Chainlink VRF
      */
-    function playGame(uint8 gameType, uint256 betAmount) external nonReentrant {
+    function playGame(
+        uint256 gameType,
+        uint256 betAmount
+    ) external nonReentrant {
         require(betAmount > 0, "Bet amount must be greater than zero");
         require(
             betAmount <= token.balanceOf(msg.sender),
