@@ -17,10 +17,6 @@ contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     // The Chainlink VRF Coordinator contract
     IVRFCoordinatorV2Plus COORDINATOR;
 
-    // The Chainlink VRF Coordinator address
-    address immutable SEPOLIA_VRF_COORDINATOR =
-        0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B;
-
     // The Chainlink VRF subscription ID for requesting randomness
     uint256 s_subscriptionId =
         47528517233559160472381547462063204554242198428552172133546525804592744181403;
