@@ -33,6 +33,7 @@ const Casino = ({ address }) => {
   const [spinning2, setSpinning2] = useState(false);
   const [playerWonEvent, setPlayerWonEvent] = useState(null);
   const [playerLostEvent, setPlayerLostEvent] = useState(null);
+  const [lastPlayTimestamp, setLastPlayTimestamp] = useState(null);
   const chainId = useChainId();
 
   const isOnExpectedNetwork =
@@ -47,7 +48,17 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerBoughtTokens(address indexed player, uint256 amount)"
         ),
-        fromBlock: 6283536n,
+        fromBlock: 6303800n,
+        toBlock: "latest",
+        args: [address],
+      });
+
+      const randomWordsRequestedEvents = await publicClient.getLogs({
+        address: contractCasinoAddress,
+        event: parseAbiItem(
+          "event RandomWordsRequested(uint256 indexed requestId, address indexed player, uint256 gameType,uint256 betAmount)"
+        ),
+        fromBlock: 6303800n,
         toBlock: "latest",
         args: [address],
       });
@@ -57,7 +68,7 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerPlayedGame(address indexed player, uint8 gameType, uint256 betAmount, uint256 winAmount)"
         ),
-        fromBlock: 6283536n,
+        fromBlock: 6303800n,
         toBlock: "latest",
       });
 
@@ -66,7 +77,7 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerWon(address indexed player,uint256 betAmount,uint256 winAmount)"
         ),
-        fromBlock: 6283536n,
+        fromBlock: 6303800n,
         toBlock: "latest",
       });
 
@@ -75,7 +86,7 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerLost(address indexed player, uint256 betAmount)"
         ),
-        fromBlock: 6283536n,
+        fromBlock: 6303800n,
         toBlock: "latest",
       });
 
@@ -84,7 +95,7 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerWithdrewTokens(address indexed player, uint256 amount)"
         ),
-        fromBlock: 6283536n,
+        fromBlock: 6303800n,
         toBlock: "latest",
       });
 
@@ -93,7 +104,7 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerGetBackEthers(address indexed player, uint256 amount)"
         ),
-        fromBlock: 6283536n,
+        fromBlock: 6303800n,
         toBlock: "latest",
       });
 
@@ -102,7 +113,7 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerBecameInactive(address indexed player)"
         ),
-        fromBlock: 6283536n,
+        fromBlock: 6303800n,
         toBlock: "latest",
       });
 
@@ -116,8 +127,8 @@ const Casino = ({ address }) => {
           },
           blockNumber: Number(event.blockNumber),
         })),
-        ...playerPlayedGameEvents.map((event) => ({
-          type: "PlayerPlayedGame",
+        ...randomWordsRequestedEvents.map((event) => ({
+          type: "RandomWordsRequested",
           address: event.address,
           args: {
             player: event.args.player,
@@ -134,6 +145,14 @@ const Casino = ({ address }) => {
         })),
         ...playerLostEvents.map((event) => ({
           type: "PlayerLost",
+          address: event.address,
+          args: {
+            player: event.args.player,
+          },
+          blockNumber: Number(event.blockNumber),
+        })),
+        ...playerPlayedGameEvents.map((event) => ({
+          type: "PlayerPlayedGame",
           address: event.address,
           args: {
             player: event.args.player,
@@ -166,20 +185,40 @@ const Casino = ({ address }) => {
         })),
       ];
 
-      if (playerWonEvents.length > 0) {
-        setPlayerWonEvent(playerWonEvents[playerWonEvents.length - 1]);
-      }
+      // Ajoutez une logique pour vérifier si de nouveaux événements pertinents sont arrivés
+      const newEvents = events.filter(
+        (event) =>
+          event.blockNumber > lastPlayTimestamp &&
+          (event.type === "PlayerWon" || event.type === "PlayerLost")
+      );
 
-      if (playerLostEvents.length > 0) {
-        setPlayerLostEvent(playerLostEvents[playerLostEvents.length - 1]);
+      if (newEvents.length > 0) {
+        // Nous avons trouvé de nouveaux événements pertinents
+        setPlayerWonEvent(newEvents.find((e) => e.type === "PlayerWon"));
+        setPlayerLostEvent(newEvents.find((e) => e.type === "PlayerLost"));
+        setLastPlayTimestamp(null); // Réinitialiser pour le prochain jeu
       }
 
       combinedEvents.sort((a, b) => b.blockNumber - a.blockNumber);
 
       setEvents(combinedEvents);
+      return newEvents.length > 0;
     } catch (error) {
       console.error("Failed to fetch events:", error);
     }
+  };
+
+  // Fonction pour démarrer le polling
+  const startPollingForEvents = () => {
+    const pollInterval = setInterval(async () => {
+      const foundNewEvents = await getEvents();
+      if (foundNewEvents) {
+        clearInterval(pollInterval);
+      }
+    }, 5000); // Vérifier toutes les 5 secondes, ajustez selon vos besoins
+
+    // Arrêter le polling après un certain temps si aucun événement n'est trouvé
+    setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000); // 5 minutes max
   };
 
   useEffect(() => {

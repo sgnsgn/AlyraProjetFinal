@@ -23,7 +23,7 @@ const SlotMachine = ({ spinning, result }) => {
         setReel2(motifs[Math.floor(Math.random() * motifs.length)]);
         setReel3(motifs[Math.floor(Math.random() * motifs.length)]);
       }, 100);
-    } else if (result && result.final) {
+    } else if (result !== null) {
       clearInterval(interval);
       if (result.won) {
         const winningSymbol = motifs[Math.floor(Math.random() * motifs.length)];
