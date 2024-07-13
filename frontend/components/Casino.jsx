@@ -33,7 +33,6 @@ const Casino = ({ address }) => {
   const [spinning2, setSpinning2] = useState(false);
   const [playerWonEvent, setPlayerWonEvent] = useState(null);
   const [playerLostEvent, setPlayerLostEvent] = useState(null);
-  const [lastPlayTimestamp, setLastPlayTimestamp] = useState(null);
   const chainId = useChainId();
 
   const isOnExpectedNetwork =
@@ -56,7 +55,7 @@ const Casino = ({ address }) => {
       const randomWordsRequestedEvents = await publicClient.getLogs({
         address: contractCasinoAddress,
         event: parseAbiItem(
-          "event RandomWordsRequested(uint256 indexed requestId, address indexed player, uint256 gameType,uint256 betAmount)"
+          "event RandomWordsRequested(uint256 indexed requestId,address indexed player,uint256 gameType,uint256 betAmount)"
         ),
         fromBlock: 6303800n,
         toBlock: "latest",
@@ -135,6 +134,14 @@ const Casino = ({ address }) => {
           },
           blockNumber: Number(event.blockNumber),
         })),
+        ...playerPlayedGameEvents.map((event) => ({
+          type: "PlayerPlayedGame",
+          address: event.address,
+          args: {
+            player: event.args.player,
+          },
+          blockNumber: Number(event.blockNumber),
+        })),
         ...playerWonEvents.map((event) => ({
           type: "PlayerWon",
           address: event.address,
@@ -145,14 +152,6 @@ const Casino = ({ address }) => {
         })),
         ...playerLostEvents.map((event) => ({
           type: "PlayerLost",
-          address: event.address,
-          args: {
-            player: event.args.player,
-          },
-          blockNumber: Number(event.blockNumber),
-        })),
-        ...playerPlayedGameEvents.map((event) => ({
-          type: "PlayerPlayedGame",
           address: event.address,
           args: {
             player: event.args.player,
@@ -185,47 +184,31 @@ const Casino = ({ address }) => {
         })),
       ];
 
-      // Ajoutez une logique pour vérifier si de nouveaux événements pertinents sont arrivés
-      const newEvents = events.filter(
-        (event) =>
-          event.blockNumber > lastPlayTimestamp &&
-          (event.type === "PlayerWon" || event.type === "PlayerLost")
-      );
+      if (playerWonEvents.length > 0) {
+        setPlayerWonEvent(playerWonEvents[playerWonEvents.length - 1]);
+      }
 
-      if (newEvents.length > 0) {
-        // Nous avons trouvé de nouveaux événements pertinents
-        setPlayerWonEvent(newEvents.find((e) => e.type === "PlayerWon"));
-        setPlayerLostEvent(newEvents.find((e) => e.type === "PlayerLost"));
-        setLastPlayTimestamp(null); // Réinitialiser pour le prochain jeu
+      if (playerLostEvents.length > 0) {
+        setPlayerLostEvent(playerLostEvents[playerLostEvents.length - 1]);
       }
 
       combinedEvents.sort((a, b) => b.blockNumber - a.blockNumber);
 
       setEvents(combinedEvents);
-      return newEvents.length > 0;
     } catch (error) {
       console.error("Failed to fetch events:", error);
     }
-  };
-
-  // Fonction pour démarrer le polling
-  const startPollingForEvents = () => {
-    const pollInterval = setInterval(async () => {
-      const foundNewEvents = await getEvents();
-      if (foundNewEvents) {
-        clearInterval(pollInterval);
-      }
-    }, 5000); // Vérifier toutes les 5 secondes, ajustez selon vos besoins
-
-    // Arrêter le polling après un certain temps si aucun événement n'est trouvé
-    setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000); // 5 minutes max
   };
 
   useEffect(() => {
     if (isOnExpectedNetwork && address) {
       getEvents();
     }
-  }, [isOnExpectedNetwork, refresh, address]);
+  }, [isOnExpectedNetwork, address]);
+
+  useEffect(() => {
+    getEvents();
+  }, [refresh]);
 
   const {
     data: ownerData,
@@ -345,7 +328,11 @@ const Casino = ({ address }) => {
           <p className="text-gray-400 italic">*1/25 chance of winning</p>
         </div>
       </div>
-      <div>{isOwner && <Events events={events} />}</div>
+      <div>
+        {isOwner && (
+          <Events events={events} refresh={refresh} getEvents={getEvents} />
+        )}
+      </div>
     </div>
   );
 };

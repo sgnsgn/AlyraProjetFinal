@@ -14,6 +14,10 @@ const eventTypes = {
     text: "PlayerBoughtTokens",
     className: "bg-yellow-400",
   },
+  RandomWordsRequested: {
+    text: "RandomWordsRequested",
+    className: "bg-amber-400",
+  },
   PlayerPlayedGame: {
     text: "PlayerPlayedGame",
     className: "bg-blue-400",
@@ -40,7 +44,11 @@ const eventTypes = {
   },
 };
 
-const Events = ({ events }) => {
+const Events = ({ events, refresh, getEvents }) => {
+  useEffect(() => {
+    getEvents();
+  }, [refresh]);
+
   return (
     <div className="text-center items-center mx-auto border border-purple-300 rounded-xl bg-black">
       <h2 className="text-4xl font-extrabold mt-4">Events</h2>
