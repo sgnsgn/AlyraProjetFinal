@@ -108,7 +108,7 @@ Below are the tests performed to ensure the proper functioning of the `NadCasino
 
 ## Screenshot  
   
-![Tests_NadCasino sol](https://github.com/user-attachments/assets/8153d495-0ab8-4de5-bc82-b035d937b9e6)
+![Tests_NadCasino sol](https://github.com/user-attachments/assets/648f955e-8923-4dc1-85e8-0b9c408bd35e)
 
 
   
