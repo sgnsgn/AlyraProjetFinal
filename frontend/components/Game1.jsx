@@ -106,6 +106,7 @@ const Game1 = ({
     if (isPlaySuccess) {
       setApproveSuccess(false);
       setBetAmount("");
+      setSpinning(false);
     }
   }, [isPlaySuccess]);
 
