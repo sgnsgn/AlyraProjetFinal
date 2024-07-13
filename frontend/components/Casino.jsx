@@ -31,6 +31,8 @@ const Casino = ({ address }) => {
   const [spinning1, setSpinning1] = useState(false);
   const [result2, setResult2] = useState(null);
   const [spinning2, setSpinning2] = useState(false);
+  const [playerWonEvent, setPlayerWonEvent] = useState(null);
+  const [playerLostEvent, setPlayerLostEvent] = useState(null);
   const chainId = useChainId();
 
   const isOnExpectedNetwork =
@@ -45,7 +47,7 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerBoughtTokens(address indexed player, uint256 amount)"
         ),
-        fromBlock: 0n,
+        fromBlock: 6283536n,
         toBlock: "latest",
         args: [address],
       });
@@ -55,7 +57,7 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerPlayedGame(address indexed player, uint8 gameType, uint256 betAmount, uint256 winAmount)"
         ),
-        fromBlock: 0n,
+        fromBlock: 6283536n,
         toBlock: "latest",
       });
 
@@ -64,7 +66,7 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerWon(address indexed player,uint256 betAmount,uint256 winAmount)"
         ),
-        fromBlock: 0n,
+        fromBlock: 6283536n,
         toBlock: "latest",
       });
 
@@ -73,7 +75,7 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerLost(address indexed player, uint256 betAmount)"
         ),
-        fromBlock: 0n,
+        fromBlock: 6283536n,
         toBlock: "latest",
       });
 
@@ -82,7 +84,7 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerWithdrewTokens(address indexed player, uint256 amount)"
         ),
-        fromBlock: 0n,
+        fromBlock: 6283536n,
         toBlock: "latest",
       });
 
@@ -91,7 +93,7 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerGetBackEthers(address indexed player, uint256 amount)"
         ),
-        fromBlock: 0n,
+        fromBlock: 6283536n,
         toBlock: "latest",
       });
 
@@ -100,7 +102,7 @@ const Casino = ({ address }) => {
         event: parseAbiItem(
           "event PlayerBecameInactive(address indexed player)"
         ),
-        fromBlock: 0n,
+        fromBlock: 6283536n,
         toBlock: "latest",
       });
 
@@ -163,6 +165,14 @@ const Casino = ({ address }) => {
           blockNumber: Number(event.blockNumber),
         })),
       ];
+
+      if (playerWonEvents.length > 0) {
+        setPlayerWonEvent(playerWonEvents[playerWonEvents.length - 1]);
+      }
+
+      if (playerLostEvents.length > 0) {
+        setPlayerLostEvent(playerLostEvents[playerLostEvents.length - 1]);
+      }
 
       combinedEvents.sort((a, b) => b.blockNumber - a.blockNumber);
 
@@ -270,6 +280,8 @@ const Casino = ({ address }) => {
               setRefresh={setRefresh}
               setSpinning={setSpinning1}
               setResult={setResult1}
+              playerWonEvent={playerWonEvent}
+              playerLostEvent={playerLostEvent}
             />
             <SlotMachine spinning={spinning1} result={result1} />
           </div>
@@ -286,6 +298,8 @@ const Casino = ({ address }) => {
               setRefresh={setRefresh}
               setSpinning={setSpinning2}
               setResult={setResult2}
+              playerWonEvent={playerWonEvent}
+              playerLostEvent={playerLostEvent}
             />
             <SlotMachine2 spinning={spinning2} result={result2} />
           </div>

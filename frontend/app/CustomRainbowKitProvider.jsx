@@ -6,13 +6,14 @@ import {
   darkTheme,
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
-import { sepolia, hardhat, holesky } from "wagmi/chains";
+// import { sepolia, hardhat } from "wagmi/chains";
+import { sepolia } from "@/utils/sepolia";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 
 const config = getDefaultConfig({
-  appName: "My RainbowKit App",
-  projectId: "7b629ea3985e109df5b48bc1f7ecb29c",
-  chains: [sepolia, hardhat, holesky],
+  appName: "My Alyra's Final Project App",
+  projectId: "57363625597bd2fe4ea8f702650b4b0d",
+  chains: [sepolia],
   ssr: true, // If your dApp uses server side rendering (SSR)
 });
 

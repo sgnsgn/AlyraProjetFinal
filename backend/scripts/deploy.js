@@ -1,9 +1,13 @@
-// Le module 'hardhat' est importé, ce qui vous permet d'interagir avec les fonctionnalités de Hardhat.
 const hre = require("hardhat");
 
 async function main() {
-  // Ici, vous utilisez l'objet 'hre.ethers' pour déployer un contrat. 'Casino' est le nom de votre contrat.
-  const casino = await hre.ethers.deployContract("Casino");
+  // L'adresse du VRFCoordinator que vous souhaitez utiliser
+  const vrfCoordinatorAddress = "0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B";
+
+  // Déployer le contrat Casino avec l'adresse du VRFCoordinator en argument
+  const Casino = await ethers.getContractFactory("Casino");
+  const casino = await Casino.deploy(vrfCoordinatorAddress);
+
   // Cette ligne attend que le déploiement du contrat soit terminé. Cela garantit que vous ne continuez pas tant que le contrat n'est pas déployé.
   await casino.waitForDeployment();
   // Une fois le contrat déployé, cette ligne imprime dans la console l'adresse du contrat déployé.
