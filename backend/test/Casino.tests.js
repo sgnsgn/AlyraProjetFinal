@@ -3,7 +3,7 @@ require("@nomicfoundation/hardhat-chai-matchers");
 const { expect } = require("chai");
 const { ethers, network } = require("hardhat");
 
-describe("NadCasino contract testing", function () {
+describe.only("NadCasino contract testing", function () {
   const TOKEN_PRICE = ethers.parseEther("0.00003");
 
   async function deployVRFCoordinatorAndCasinoFixtureBeforeTheBought() {
@@ -264,6 +264,24 @@ describe("NadCasino contract testing", function () {
       );
       await expect(casino.connect(user1).devolverTokens(0)).to.be.revertedWith(
         "You need to return a number of tokens greater than 0"
+      );
+    });
+
+    it("Should revert if the contract does not have enough ETH balance to pay for returned tokens", async function () {
+      const { casino, owner, token, user1 } = await loadFixture(
+        deployVRFCoordinatorAndCasinoFixture
+      );
+      await expect(casino.connect(owner).withdrawEth(1)).to.changeEtherBalance(
+        owner,
+        ethers.parseEther("1.0")
+      );
+
+      // Ensure the contract does not have sufficient ETH balance
+      await token.connect(user1).approve(casino, 10);
+
+      // Try to return the tokens
+      await expect(casino.connect(user1).devolverTokens(10)).to.be.revertedWith(
+        "Insufficient ETH balance in contract to pay for returned tokens"
       );
     });
 
