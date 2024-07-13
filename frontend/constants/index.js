@@ -1,9 +1,14 @@
 export const contractCasinoAddress =
-  "0xD8275Cd9B8B1d2A54C464ccc04bE98b993b67f07";
-// "0xF517eeB7b1B571117c8c3e36b7e9fb9fE0380414";
+  "0x95aE0Ec404960ED9Ba4A6d97DEF48100e58D2E40";
 export const contractCasinoAbi = [
   {
-    inputs: [],
+    inputs: [
+      {
+        internalType: "address",
+        name: "_vrfCoordinator",
+        type: "address",
+      },
+    ],
     stateMutability: "nonpayable",
     type: "constructor",
   },
@@ -11,22 +16,37 @@ export const contractCasinoAbi = [
     inputs: [
       {
         internalType: "address",
-        name: "owner",
+        name: "have",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "want",
         type: "address",
       },
     ],
-    name: "OwnableInvalidOwner",
+    name: "OnlyCoordinatorCanFulfill",
     type: "error",
   },
   {
     inputs: [
       {
         internalType: "address",
-        name: "account",
+        name: "have",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "owner",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "coordinator",
         type: "address",
       },
     ],
-    name: "OwnableUnauthorizedAccount",
+    name: "OnlyOwnerOrCoordinator",
     type: "error",
   },
   {
@@ -35,18 +55,55 @@ export const contractCasinoAbi = [
     type: "error",
   },
   {
+    inputs: [],
+    name: "ZeroAddress",
+    type: "error",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "vrfCoordinator",
+        type: "address",
+      },
+    ],
+    name: "CoordinatorSet",
+    type: "event",
+  },
+  {
     anonymous: false,
     inputs: [
       {
         indexed: true,
         internalType: "address",
-        name: "previousOwner",
+        name: "from",
         type: "address",
       },
       {
         indexed: true,
         internalType: "address",
-        name: "newOwner",
+        name: "to",
+        type: "address",
+      },
+    ],
+    name: "OwnershipTransferRequested",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "from",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "to",
         type: "address",
       },
     ],
@@ -134,9 +191,9 @@ export const contractCasinoAbi = [
       },
       {
         indexed: false,
-        internalType: "uint8",
+        internalType: "uint256",
         name: "gameType",
-        type: "uint8",
+        type: "uint256",
       },
       {
         indexed: false,
@@ -199,6 +256,37 @@ export const contractCasinoAbi = [
     type: "event",
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "requestId",
+        type: "uint256",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "player",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "gameType",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "betAmount",
+        type: "uint256",
+      },
+    ],
+    name: "RandomWordsRequested",
+    type: "event",
+  },
+  {
     stateMutability: "payable",
     type: "fallback",
   },
@@ -213,6 +301,13 @@ export const contractCasinoAbi = [
       },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "acceptOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
@@ -283,9 +378,9 @@ export const contractCasinoAbi = [
   {
     inputs: [
       {
-        internalType: "uint8",
+        internalType: "uint256",
         name: "gameType",
-        type: "uint8",
+        type: "uint256",
       },
       {
         internalType: "uint256",
@@ -296,6 +391,44 @@ export const contractCasinoAbi = [
     name: "playGame",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    name: "playerBetAmount",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    name: "playerGameType",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
   {
@@ -333,8 +466,64 @@ export const contractCasinoAbi = [
     type: "function",
   },
   {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "requestId",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256[]",
+        name: "randomWords",
+        type: "uint256[]",
+      },
+    ],
+    name: "rawFulfillRandomWords",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "requestIdToPlayer",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [],
-    name: "renounceOwnership",
+    name: "s_vrfCoordinator",
+    outputs: [
+      {
+        internalType: "contract IVRFCoordinatorV2Plus",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_vrfCoordinator",
+        type: "address",
+      },
+    ],
+    name: "setCoordinator",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -356,7 +545,7 @@ export const contractCasinoAbi = [
     inputs: [
       {
         internalType: "address",
-        name: "newOwner",
+        name: "to",
         type: "address",
       },
     ],
@@ -384,8 +573,7 @@ export const contractCasinoAbi = [
   },
 ];
 export const contractTokenAddress =
-  "0xE2775e7644ea0B541Aa0f52082683f92c5DFD140";
-// "0x03Dd97437769B8cfFD69F3b4384267FB1781356e";
+  "0x9eFEe9904DF8C31B5fEf952A094eaA3B06828Cec";
 export const contractTokenAbi = [
   {
     inputs: [
