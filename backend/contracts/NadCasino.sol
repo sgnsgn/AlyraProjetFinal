@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./CasinoToken.sol";
+import "./NadCasinoToken.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IVRFCoordinatorV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
-contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
+/**
+ * @title NadCasino Smart Contract
+ * @author sgnsgn
+ * @notice This contract implements a casino game using Chainlink VRF for randomness
+ * @dev Inherits from ReentrancyGuard and VRFConsumerBaseV2Plus
+ */
+contract NadCasino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     // The Chainlink VRF Coordinator contract
     IVRFCoordinatorV2Plus COORDINATOR;
 
@@ -29,10 +35,14 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     // number of confirmations required for the VRF request
     uint16 requestConfirmations = 3;
 
-    CasinoToken private token;
+    //
+    NadCasinoToken private token;
+    //
     uint256 public constant TOKEN_PRICE = 0.00003 ether;
+    //
     address public tokenAddress;
 
+    // Player struct
     struct Player {
         uint256 totalGains; // Total gains accumulated by the player
         uint256 biggestWin; // Biggest single win amount by the player
@@ -40,14 +50,19 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         uint256 nbGamesWins; // Number of games won by the player
     }
 
+    //
     mapping(address => Player) public players;
+
+    // Mappings for the interaction with Chainlink VRF
     mapping(uint256 => address) public requestIdToPlayer;
     mapping(address => uint256) public playerBetAmount;
     mapping(address => uint8) public playerGameType;
 
+    // Globals variables
     uint256 public biggestSingleWinEver;
     uint256 public biggestTotalWinEver;
 
+    // Events
     event PlayerBoughtTokens(address indexed player, uint256 amount);
     event RandomWordsRequested(
         uint256 indexed requestId,
@@ -71,15 +86,29 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
     event PlayerBecameInactive(address indexed player);
     event PlayerGetBackEthers(address indexed player, uint256 amount);
 
+    /**
+     * @notice Initializes the contract
+     * @param _vrfCoordinator The Chainlink VRF Coordinator address
+     * @dev Calls the constructor of VRFConsumerBaseV2Plus
+     * Calls the constructor of NadCasinoToken
+     * Calls the constructor of the VRFV2PlusClient
+     * Sets the token address
+     * Mints 1,000,000 tokens
+     */
     constructor(
         address _vrfCoordinator
     ) VRFConsumerBaseV2Plus(_vrfCoordinator) {
         COORDINATOR = IVRFCoordinatorV2Plus(_vrfCoordinator);
-        token = new CasinoToken(address(this));
+        token = new NadCasinoToken(address(this));
         token.mint(address(this), 1000000);
         tokenAddress = address(token);
     }
 
+    /**
+     * @notice Requests randomness from Chainlink VRF
+     * @param _numWords The number of random words to request
+     * @return The ID of the request
+     */
     function requestRandomWords(
         uint32 _numWords
     ) private returns (uint256 requestId) {
@@ -97,6 +126,12 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         );
     }
 
+    /**
+    /// @notice Fulfills the random words request from Chainlink VRF
+    /// @param requestId The ID of the request
+    /// @param randomWords The array of random words received
+    /// @dev Internal function called by Chainlink VRF
+     */
     function fulfillRandomWords(
         uint256 requestId,
         uint256[] calldata randomWords
@@ -145,12 +180,21 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         delete playerGameType[player];
     }
 
+    /**
+     * @notice Converts tokens to wei
+     * @param _numTokens The number of tokens to convert
+     * @return: The_number of wei
+     */
     function convertTokens(uint256 _numTokens) internal pure returns (uint256) {
         return _numTokens * TOKEN_PRICE;
     }
 
-    // Buy tokens by sending ETH
-    function buyTokens(uint256 _numTokens) public payable nonReentrant {
+    /**
+    /// @notice Allows a player to buy tokens with ETH
+    /// @param _numTokens The number of tokens to buy
+    /// @dev Checks for minimum purchase, correct ETH amount, and ownership limits
+    */
+    function buyTokens(uint256 _numTokens) external payable nonReentrant {
         require(_numTokens >= 10, "You can not buy less than 10 tokens");
         require(
             msg.value >= TOKEN_PRICE * 10,
@@ -179,8 +223,12 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         emit PlayerBoughtTokens(msg.sender, tokensToBuy);
     }
 
-    // Return tokens to the Smart Contract
-    function devolverTokens(uint256 _numTokens) public nonReentrant {
+    /**
+    /// @notice Allows a player to return tokens and receive ETH
+    /// @param _numTokens The number of tokens to return
+    /// @dev Checks token balance and allowance before transfer
+     */
+    function devolverTokens(uint256 _numTokens) external nonReentrant {
         require(
             _numTokens > 0,
             "You need to return a number of tokens greater than 0"
@@ -192,6 +240,11 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         require(
             token.allowance(msg.sender, address(this)) >= _numTokens,
             "Allowance not set or insufficient"
+        );
+
+        require(
+            address(this).balance >= convertTokens(_numTokens),
+            "Insufficient ETH balance in contract to pay for returned tokens"
         );
 
         // Effects: Transfer tokens to the Smart Contract
@@ -214,7 +267,13 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         }
     }
 
-    function playGame(uint8 gameType, uint256 betAmount) public nonReentrant {
+    /**
+    /// @notice Initiates a game play
+    /// @param gameType The type of game to play (1 or 2)
+    /// @param betAmount The amount of tokens to bet
+    /// @dev Requests random words from Chainlink VRF
+     */
+    function playGame(uint8 gameType, uint256 betAmount) external nonReentrant {
         require(betAmount > 0, "Bet amount must be greater than zero");
         require(
             betAmount <= token.balanceOf(msg.sender),
@@ -245,6 +304,12 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         emit RandomWordsRequested(requestId, msg.sender, gameType, betAmount);
     }
 
+    /**
+    /// @notice Checks if the contract has enough tokens to pay the potential win
+    /// @param _potentialWinTokens The amount of tokens to pay
+    /// @param _playerAddress The address of the player
+    /// @dev Checks if the contract has enough tokens to pay the potential win
+     */
     function checkContractSolvency(
         uint256 _potentialWinTokens,
         address _playerAddress
@@ -262,6 +327,11 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         );
     }
 
+    /**
+    /// @notice Withdraws ETH from the contract
+    /// @param amount The amount of ETH to withdraw
+    /// @dev Withdraws ETH from the contract
+     */
     function withdrawEth(uint256 amount) public onlyOwner nonReentrant {
         require(
             address(this).balance >= amount * 1 ether,
@@ -273,10 +343,18 @@ contract Casino is ReentrancyGuard, VRFConsumerBaseV2Plus {
         require(success, "Transfer failed");
     }
 
+    /**
+    /// @notice Fallback function
+    /// @dev Fallback function
+     */
     fallback() external payable {
         revert("Fallback function does not accept calls with data");
     }
 
+    /**
+    /// @notice Receive function
+    /// @dev Receive function
+     */
     receive() external payable {
         revert("Contract does not accept plain Ether transfers");
     }

@@ -4,12 +4,12 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract CasinoToken is ERC20, Ownable {
+contract NadCasinoToken is ERC20, Ownable {
     uint8 private _decimals;
 
     constructor(
         address initialOwner
-    ) ERC20("CasinoToken", "CTK") Ownable(initialOwner) {
+    ) ERC20("NadCasino", "NADC") Ownable(initialOwner) {
         _decimals = 0;
     }
 
