@@ -13,7 +13,6 @@ const SlotMachine = ({ spinning, result }) => {
   const [reel2, setReel2] = useState("🔥");
   const [reel3, setReel3] = useState("💎");
   const [resultMessage, setResultMessage] = useState("");
-  const [winning, setWinning] = useState(false);
 
   useEffect(() => {
     let interval;
@@ -23,14 +22,13 @@ const SlotMachine = ({ spinning, result }) => {
         setReel2(motifs[Math.floor(Math.random() * motifs.length)]);
         setReel3(motifs[Math.floor(Math.random() * motifs.length)]);
       }, 100);
-    } else if (result && result.final) {
+    } else if (result) {
       clearInterval(interval);
       if (result.won) {
         const winningSymbol = motifs[Math.floor(Math.random() * motifs.length)];
         setReel1(winningSymbol);
         setReel2(winningSymbol);
         setReel3(winningSymbol);
-        setWinning(true);
         setResultMessage("Congratulations! You won!");
       } else {
         const firstSymbol = motifs[Math.floor(Math.random() * motifs.length)];

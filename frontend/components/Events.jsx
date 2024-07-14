@@ -16,11 +16,11 @@ const eventTypes = {
   },
   RandomWordsRequested: {
     text: "RandomWordsRequested",
-    className: "bg-amber-400",
+    className: "bg-blue-400",
   },
   PlayerPlayedGame: {
     text: "PlayerPlayedGame",
-    className: "bg-blue-400",
+    className: "bg-emerald-400",
   },
   PlayerWon: {
     text: "PlayerWon",
@@ -60,6 +60,8 @@ const Events = ({ events }) => {
         <TableBody>
           {events.map((event) => {
             const eventType = eventTypes[event.type] || eventTypes.default;
+            const args = event.args;
+            const playerAddress = args.player || JSON.stringify(args); // Extract the player address or show the full args if player is not available
             return (
               <TableRow key={crypto.randomUUID()} className="text-center">
                 <TableCell className="font-medium text-center">
@@ -67,9 +69,7 @@ const Events = ({ events }) => {
                     {eventType.text}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-center">
-                  {JSON.stringify(event.args)}
-                </TableCell>
+                <TableCell className="text-center">{playerAddress}</TableCell>
                 <TableCell className="text-center">
                   {event.blockNumber}
                 </TableCell>

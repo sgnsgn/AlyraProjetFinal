@@ -31,8 +31,6 @@ const Casino = ({ address }) => {
   const [spinning1, setSpinning1] = useState(false);
   const [result2, setResult2] = useState(null);
   const [spinning2, setSpinning2] = useState(false);
-  const [playerWonEvent, setPlayerWonEvent] = useState(null);
-  const [playerLostEvent, setPlayerLostEvent] = useState(null);
   const chainId = useChainId();
 
   const isOnExpectedNetwork =
@@ -49,7 +47,6 @@ const Casino = ({ address }) => {
         ),
         fromBlock: 6303800n,
         toBlock: "latest",
-        args: [address],
       });
 
       const randomWordsRequestedEvents = await publicClient.getLogs({
@@ -59,7 +56,6 @@ const Casino = ({ address }) => {
         ),
         fromBlock: 6303800n,
         toBlock: "latest",
-        args: [address],
       });
 
       const playerPlayedGameEvents = await publicClient.getLogs({
@@ -184,14 +180,6 @@ const Casino = ({ address }) => {
         })),
       ];
 
-      if (playerWonEvents.length > 0) {
-        setPlayerWonEvent(playerWonEvents[playerWonEvents.length - 1]);
-      }
-
-      if (playerLostEvents.length > 0) {
-        setPlayerLostEvent(playerLostEvents[playerLostEvents.length - 1]);
-      }
-
       combinedEvents.sort((a, b) => b.blockNumber - a.blockNumber);
 
       setEvents(combinedEvents);
@@ -210,13 +198,7 @@ const Casino = ({ address }) => {
     getEvents();
   }, [refresh]);
 
-  const {
-    data: ownerData,
-    error: ownerError,
-    isLoading: isOwnerLoading,
-    isSuccess: isOwnerSuccess,
-    refetch,
-  } = useReadContract({
+  const { data: ownerData, error: ownerError } = useReadContract({
     address: contractCasinoAddress,
     abi: contractCasinoAbi,
     functionName: "owner",
@@ -302,8 +284,6 @@ const Casino = ({ address }) => {
               setRefresh={setRefresh}
               setSpinning={setSpinning1}
               setResult={setResult1}
-              playerWonEvent={playerWonEvent}
-              playerLostEvent={playerLostEvent}
             />
             <SlotMachine spinning={spinning1} result={result1} />
           </div>
@@ -320,8 +300,6 @@ const Casino = ({ address }) => {
               setRefresh={setRefresh}
               setSpinning={setSpinning2}
               setResult={setResult2}
-              playerWonEvent={playerWonEvent}
-              playerLostEvent={playerLostEvent}
             />
             <SlotMachine2 spinning={spinning2} result={result2} />
           </div>

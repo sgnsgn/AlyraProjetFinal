@@ -17,8 +17,6 @@ const Game2 = ({
   setRefresh,
   setSpinning,
   setResult,
-  playerWonEvent,
-  playerLostEvent,
 }) => {
   const [betAmount, setBetAmount] = useState("");
   const [approveSuccess, setApproveSuccess] = useState(false);
@@ -53,8 +51,7 @@ const Game2 = ({
     abi: casinoAbi,
     eventName: "PlayerWon",
     onLogs(logs) {
-      setResult({ won: true, logs });
-      setSpinning(false);
+      handleContractEvent(logs, "PlayerWon");
     },
   });
 
@@ -63,11 +60,9 @@ const Game2 = ({
     abi: casinoAbi,
     eventName: "PlayerLost",
     onLogs(logs) {
-      setResult({ won: false, logs });
-      setSpinning(false);
+      handleContractEvent(logs, "PlayerLost");
     },
   });
-
   const handleApprove = async () => {
     if (isNaN(betAmount) || betAmount < 3) {
       toast({
@@ -115,6 +110,13 @@ const Game2 = ({
     }
   };
 
+  const handleContractEvent = async (logs, eventType) => {
+    // Mise à jour de l'état
+    setResult({ won: eventType === "PlayerWon", logs });
+    setSpinning(false);
+    setRefresh((prev) => !prev);
+  };
+
   useEffect(() => {
     if (isApproveSuccess) {
       setApproveSuccess(true);
@@ -129,29 +131,10 @@ const Game2 = ({
   useEffect(() => {
     if (isPlayLoading) {
       setSpinning(true);
+      setApproveSuccess(false);
+      setBetAmount("");
     }
   }, [isPlayLoading]);
-
-  useEffect(() => {
-    if (isPlaySuccess) {
-      setApproveSuccess(false);
-      setRefresh((prev) => !prev);
-      setBetAmount("");
-      setSpinning(false);
-    }
-  }, [isPlaySuccess, setRefresh]);
-
-  useEffect(() => {
-    if (playerWonEvent || playerLostEvent) {
-      if (playerWonEvent) {
-        setResult({ won: true });
-      } else if (playerLostEvent) {
-        setResult({ won: false });
-      }
-      setSpinning(false);
-      setRefresh((prev) => !prev);
-    }
-  }, [playerWonEvent, playerLostEvent, setRefresh, setSpinning, setResult]);
 
   useEffect(() => {
     if (playError) {
