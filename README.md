@@ -2,6 +2,7 @@
 
 This repository contains the source code for my final project at [Alyra](https://formation.alyra.fr/login).  
 This project includes a backend with smart contracts and a frontend that interacts with these contracts deployed on the Sepolia blockchain.
+My deployed DApp is available here : https://deploy-casino-final-project-alyra.vercel.app/
 
 ## Table of Contents
 
