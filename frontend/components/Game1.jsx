@@ -17,8 +17,6 @@ const Game1 = ({
   setRefresh,
   setSpinning,
   setResult,
-  playerWonEvent,
-  playerLostEvent,
 }) => {
   const [betAmount, setBetAmount] = useState("");
   const [approveSuccess, setApproveSuccess] = useState(false);
@@ -53,8 +51,7 @@ const Game1 = ({
     abi: casinoAbi,
     eventName: "PlayerWon",
     onLogs(logs) {
-      setResult({ won: true, logs });
-      setSpinning(false);
+      handleContractEvent(logs, "PlayerWon");
     },
   });
 
@@ -63,8 +60,7 @@ const Game1 = ({
     abi: casinoAbi,
     eventName: "PlayerLost",
     onLogs(logs) {
-      setResult({ won: false, logs });
-      setSpinning(false);
+      handleContractEvent(logs, "PlayerLost");
     },
   });
 
@@ -109,6 +105,13 @@ const Game1 = ({
     }
   };
 
+  const handleContractEvent = async (logs, eventType) => {
+    // Mise à jour de l'état
+    setResult({ won: eventType === "PlayerWon", logs });
+    setSpinning(false);
+    setRefresh((prev) => !prev);
+  };
+
   useEffect(() => {
     if (isApproveSuccess) {
       setApproveSuccess(true);
@@ -123,34 +126,15 @@ const Game1 = ({
   useEffect(() => {
     if (isPlayLoading) {
       setSpinning(true);
+      setApproveSuccess(false);
+      setBetAmount("");
     }
   }, [isPlayLoading]);
 
   useEffect(() => {
-    if (isPlaySuccess) {
-      setApproveSuccess(false);
-      setRefresh((prev) => !prev);
-      setBetAmount("");
-      setSpinning(false);
-    }
-  }, [isPlaySuccess, setRefresh]);
-
-  useEffect(() => {
-    if (playerWonEvent || playerLostEvent) {
-      if (playerWonEvent) {
-        setResult({ won: true });
-      } else if (playerLostEvent) {
-        setResult({ won: false });
-      }
-      setSpinning(false);
-      setRefresh((prev) => !prev);
-    }
-  }, [playerWonEvent, playerLostEvent, setRefresh, setSpinning, setResult]);
-
-  useEffect(() => {
     if (playError) {
-      setApproveSuccess(false);
       setRefresh((prev) => !prev);
+      setApproveSuccess(false);
       setBetAmount("");
       setSpinning(false);
     }

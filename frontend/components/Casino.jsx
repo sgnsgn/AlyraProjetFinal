@@ -184,13 +184,13 @@ const Casino = ({ address }) => {
         })),
       ];
 
-      // if (playerWonEvents.length > 0) {
-      //   setPlayerWonEvent(playerWonEvents[playerWonEvents.length - 1]);
-      // }
+      if (playerWonEvents.length > 0) {
+        setPlayerWonEvent(playerWonEvents[playerWonEvents.length - 1]);
+      }
 
-      // if (playerLostEvents.length > 0) {
-      //   setPlayerLostEvent(playerLostEvents[playerLostEvents.length - 1]);
-      // }
+      if (playerLostEvents.length > 0) {
+        setPlayerLostEvent(playerLostEvents[playerLostEvents.length - 1]);
+      }
 
       combinedEvents.sort((a, b) => b.blockNumber - a.blockNumber);
 
@@ -328,11 +328,7 @@ const Casino = ({ address }) => {
           <p className="text-gray-400 italic">*1/25 chance of winning</p>
         </div>
       </div>
-      <div>
-        {isOwner && (
-          <Events events={events} refresh={refresh} getEvents={getEvents} />
-        )}
-      </div>
+      <div>{isOwner && <Events events={events} />}</div>
     </div>
   );
 };
