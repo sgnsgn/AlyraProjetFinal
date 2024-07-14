@@ -50,8 +50,9 @@ const Game2 = ({
     address: casinoAddress,
     abi: casinoAbi,
     eventName: "PlayerWon",
-    onLogs(logs) {
-      handleContractEvent(logs, "PlayerWon");
+    async onLogs(logs) {
+      await handleContractEvent(logs, "PlayerWon");
+      setRefresh((prev) => !prev);
     },
   });
 
@@ -59,10 +60,12 @@ const Game2 = ({
     address: casinoAddress,
     abi: casinoAbi,
     eventName: "PlayerLost",
-    onLogs(logs) {
-      handleContractEvent(logs, "PlayerLost");
+    async onLogs(logs) {
+      await handleContractEvent(logs, "PlayerLost");
+      setRefresh((prev) => !prev);
     },
   });
+
   const handleApprove = async () => {
     if (isNaN(betAmount) || betAmount < 3) {
       toast({

@@ -227,7 +227,7 @@ const Casino = ({ address }) => {
 
   return (
     <div className="w-3/4 text-center items-center mx-auto">
-      <div className="p-2 mb-5 border border-purple-300 rounded-xl bg-black">
+      {/* <div className="p-2 mb-5 border border-purple-300 rounded-xl bg-black">
         <div>
           Welcone on board to you :{" "}
           <span className="text-purple-400">{address}</span>
@@ -236,7 +236,7 @@ const Casino = ({ address }) => {
           You're actually on the network :{" "}
           <span className="text-purple-400">{chainId}</span>
         </div>
-      </div>
+      </div> */}
       <BestResults
         casinoAddress={contractCasinoAddress}
         casinoAbi={contractCasinoAbi}

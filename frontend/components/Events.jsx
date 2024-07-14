@@ -53,7 +53,7 @@ const Events = ({ events }) => {
         <TableHeader>
           <TableRow className="text-center">
             <TableHead className="w-1/3 text-center">Type</TableHead>
-            <TableHead className="w-1/3 text-center">Args</TableHead>
+            <TableHead className="w-1/3 text-center">Address</TableHead>
             <TableHead className="w-1/3 text-center">Block Number</TableHead>
           </TableRow>
         </TableHeader>
