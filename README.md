@@ -63,8 +63,12 @@ npm install
 **Configure environment variables:**
 
 - Create a .env file in the backend directory and add the necessary information (API key, node URL, etc.)
+- Do not forget to install dotenv before any push online
+```bash
+npm install dotenv
+```
 
-** Compile and deploy smart contracts:**
+**Compile and deploy smart contracts:**
 
 ```bash
 npx hardhat compile
