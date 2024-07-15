@@ -17,6 +17,7 @@ const Game2 = ({
   setRefresh,
   setSpinning,
   setResult,
+  setRefreshSlot2,
 }) => {
   const [betAmount, setBetAmount] = useState("");
   const [approveSuccess, setApproveSuccess] = useState(false);
@@ -52,7 +53,7 @@ const Game2 = ({
     eventName: "PlayerWon",
     async onLogs(logs) {
       await handleContractEvent(logs, "PlayerWon");
-      setRefresh((prev) => !prev);
+      // setRefresh((prev) => !prev);
     },
   });
 
@@ -62,7 +63,7 @@ const Game2 = ({
     eventName: "PlayerLost",
     async onLogs(logs) {
       await handleContractEvent(logs, "PlayerLost");
-      setRefresh((prev) => !prev);
+      // setRefresh((prev) => !prev);
     },
   });
 
@@ -114,10 +115,9 @@ const Game2 = ({
   };
 
   const handleContractEvent = async (logs, eventType) => {
-    // Mise à jour de l'état
-    setResult({ won: eventType === "PlayerWon", logs });
+    setResult({ won: eventType === "PlayerWon", final: true });
     setSpinning(false);
-    setRefresh((prev) => !prev);
+    setRefreshSlot2((prev) => !prev); // Ajouté ici
   };
 
   useEffect(() => {
@@ -193,28 +193,30 @@ const Game2 = ({
           +3
         </button>
       </div>
-      <button
-        className={`bg-purple-400 border border-white rounded-lg px-4 py-2 w-full max-w-xs ${
-          isApproveLoading || !betAmount || approveSuccess
-            ? "opacity-50 cursor-not-allowed"
-            : ""
-        }`}
-        onClick={handleApprove}
-        disabled={!betAmount || isApproveLoading || approveSuccess}
-      >
-        {isApproveLoading ? "Processing..." : "Approve"}
-      </button>
-      <button
-        className={`bg-purple-400 border border-white rounded-lg px-4 py-2 mt-2 w-full max-w-xs ${
-          !approveSuccess || isPlayLoading
-            ? "opacity-50 cursor-not-allowed"
-            : ""
-        }`}
-        onClick={handlePlayGame}
-        disabled={!approveSuccess || isPlayLoading}
-      >
-        {isPlayLoading ? "Processing..." : "Play Game"}
-      </button>
+      <div className="flex flex-col items-center">
+        <button
+          className={`bg-purple-400 border border-white rounded-lg px-4 py-2 w-full max-w-xs ${
+            isApproveLoading || !betAmount || approveSuccess
+              ? "opacity-50 cursor-not-allowed"
+              : ""
+          }`}
+          onClick={handleApprove}
+          disabled={!betAmount || isApproveLoading || approveSuccess}
+        >
+          {isApproveLoading ? "Processing..." : "Approve"}
+        </button>
+        <button
+          className={`bg-purple-400 border border-white rounded-lg px-4 py-2 mt-2 w-full max-w-xs ${
+            !approveSuccess || isPlayLoading
+              ? "opacity-50 cursor-not-allowed"
+              : ""
+          }`}
+          onClick={handlePlayGame}
+          disabled={!approveSuccess || isPlayLoading}
+        >
+          {isPlayLoading ? "Processing..." : "Play Game"}
+        </button>
+      </div>
       <ToastManager
         hash={approveHash}
         isLoading={isApproveLoading}

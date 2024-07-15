@@ -27,6 +27,8 @@ const Casino = ({ address }) => {
   const [isOwner, setIsOwner] = useState(false);
   const [refresh, setRefresh] = useState(false);
   const [events, setEvents] = useState([]);
+  const [refreshSlot1, setRefreshSlot1] = useState(false);
+  const [refreshSlot2, setRefreshSlot2] = useState(false);
   const [result1, setResult1] = useState(null);
   const [spinning1, setSpinning1] = useState(false);
   const [result2, setResult2] = useState(null);
@@ -198,6 +200,22 @@ const Casino = ({ address }) => {
     getEvents();
   }, [refresh]);
 
+  useEffect(() => {
+    if (refreshSlot1) {
+      setResult1((previousResult) => ({ ...previousResult, final: true }));
+      setSpinning1(false);
+      getEvents();
+    }
+  }, [refreshSlot1]);
+
+  useEffect(() => {
+    if (refreshSlot2) {
+      setResult2((previousResult) => ({ ...previousResult, final: true }));
+      setSpinning2(false);
+      getEvents();
+    }
+  }, [refreshSlot2]);
+
   const { data: ownerData, error: ownerError } = useReadContract({
     address: contractCasinoAddress,
     abi: contractCasinoAbi,
@@ -284,6 +302,7 @@ const Casino = ({ address }) => {
               setRefresh={setRefresh}
               setSpinning={setSpinning1}
               setResult={setResult1}
+              setRefreshSlot1={setRefreshSlot1}
             />
             <SlotMachine spinning={spinning1} result={result1} />
           </div>
@@ -300,6 +319,7 @@ const Casino = ({ address }) => {
               setRefresh={setRefresh}
               setSpinning={setSpinning2}
               setResult={setResult2}
+              setRefreshSlot1={setRefreshSlot2}
             />
             <SlotMachine2 spinning={spinning2} result={result2} />
           </div>

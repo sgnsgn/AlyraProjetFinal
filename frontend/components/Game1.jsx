@@ -17,6 +17,7 @@ const Game1 = ({
   setRefresh,
   setSpinning,
   setResult,
+  setRefreshSlot1,
 }) => {
   const [betAmount, setBetAmount] = useState("");
   const [approveSuccess, setApproveSuccess] = useState(false);
@@ -50,9 +51,8 @@ const Game1 = ({
     address: casinoAddress,
     abi: casinoAbi,
     eventName: "PlayerWon",
-    async onLogs(logs) {
-      await handleContractEvent(logs, "PlayerWon");
-      setRefresh((prev) => !prev);
+    onLogs(logs) {
+      handleContractEvent(logs, "PlayerWon");
     },
   });
 
@@ -60,9 +60,8 @@ const Game1 = ({
     address: casinoAddress,
     abi: casinoAbi,
     eventName: "PlayerLost",
-    async onLogs(logs) {
-      await handleContractEvent(logs, "PlayerLost");
-      setRefresh((prev) => !prev);
+    onLogs(logs) {
+      handleContractEvent(logs, "PlayerLost");
     },
   });
 
@@ -108,10 +107,9 @@ const Game1 = ({
   };
 
   const handleContractEvent = async (logs, eventType) => {
-    // Mise à jour de l'état
-    setResult({ won: eventType === "PlayerWon", logs });
+    setResult({ final: true, won: eventType === "PlayerWon", logs });
     setSpinning(false);
-    setRefresh((prev) => !prev);
+    setRefreshSlot1((prev) => !prev);
   };
 
   useEffect(() => {
@@ -154,35 +152,37 @@ const Game1 = ({
       <p className="text-3xl text-yellow-400 mb-7 blink font-extrabold">
         Win multiplier x 7
       </p>
-      <input
-        className="text-black w-full max-w-xs border border-gray-300 rounded-lg px-4 py-2 mb-2"
-        type="number"
-        value={betAmount}
-        onChange={(e) => setBetAmount(e.target.value)}
-        placeholder="Enter bet amount"
-      />
-      <button
-        className={`bg-purple-400 border border-white rounded-lg px-4 py-2 w-full max-w-xs ${
-          isApproveLoading || !betAmount || approveSuccess
-            ? "opacity-50 cursor-not-allowed"
-            : ""
-        }`}
-        onClick={handleApprove}
-        disabled={!betAmount || isApproveLoading || approveSuccess}
-      >
-        {isApproveLoading ? "Processing..." : "Approve"}
-      </button>
-      <button
-        className={`bg-purple-400 border border-white rounded-lg px-4 py-2 mt-2 w-full max-w-xs ${
-          !approveSuccess || isPlayLoading
-            ? "opacity-50 cursor-not-allowed"
-            : ""
-        }`}
-        onClick={handlePlayGame}
-        disabled={!approveSuccess || isPlayLoading}
-      >
-        {isPlayLoading ? "Processing..." : "Play Game"}
-      </button>
+      <div className="flex flex-col items-center">
+        <input
+          className="text-black w-full max-w-xs border border-gray-300 rounded-lg px-4 py-2 mb-2"
+          type="number"
+          value={betAmount}
+          onChange={(e) => setBetAmount(e.target.value)}
+          placeholder="Enter bet amount"
+        />
+        <button
+          className={`bg-purple-400 border border-white rounded-lg px-4 py-2 w-full max-w-xs ${
+            isApproveLoading || !betAmount || approveSuccess
+              ? "opacity-50 cursor-not-allowed"
+              : ""
+          }`}
+          onClick={handleApprove}
+          disabled={!betAmount || isApproveLoading || approveSuccess}
+        >
+          {isApproveLoading ? "Processing..." : "Approve"}
+        </button>
+        <button
+          className={`bg-purple-400 border border-white rounded-lg px-4 py-2 mt-2 w-full max-w-xs ${
+            !approveSuccess || isPlayLoading
+              ? "opacity-50 cursor-not-allowed"
+              : ""
+          }`}
+          onClick={handlePlayGame}
+          disabled={!approveSuccess || isPlayLoading}
+        >
+          {isPlayLoading ? "Processing..." : "Play Game"}
+        </button>
+      </div>
       <ToastManager
         hash={approveHash}
         isPending={isApprovePending}

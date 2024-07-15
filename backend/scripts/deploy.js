@@ -1,5 +1,4 @@
-const hre = require("hardhat");
-
+const { ethers } = require("hardhat");
 async function main() {
   const vrfCoordinatorAddress = "0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B";
 
