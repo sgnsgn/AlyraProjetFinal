@@ -8,6 +8,7 @@ const Player = ({
   tokenAddress,
   tokenAbi,
   refresh,
+  lastUpdate,
 }) => {
   const { data: playerData, refetch: refetchPlayerData } = useReadContract({
     address: casinoAddress,
@@ -22,6 +23,11 @@ const Player = ({
     functionName: "balanceOf",
     args: [address],
   });
+
+  useEffect(() => {
+    refetchPlayerData();
+    refetchTokenBalance();
+  }, [lastUpdate]);
 
   useEffect(() => {
     refetchPlayerData();

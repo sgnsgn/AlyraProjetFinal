@@ -15,9 +15,9 @@ const Game1 = ({
   tokenAddress,
   tokenAbi,
   setRefresh,
-  setSpinning,
+  setSlotUpdate,
   setResult,
-  setRefreshSlot1,
+  setSpinning,
 }) => {
   const [betAmount, setBetAmount] = useState("");
   const [approveSuccess, setApproveSuccess] = useState(false);
@@ -107,9 +107,7 @@ const Game1 = ({
   };
 
   const handleContractEvent = async (logs, eventType) => {
-    setResult({ final: true, won: eventType === "PlayerWon", logs });
-    setSpinning(false);
-    setRefreshSlot1((prev) => !prev);
+    setSlotUpdate({ slot: 1, eventType, logs });
   };
 
   useEffect(() => {

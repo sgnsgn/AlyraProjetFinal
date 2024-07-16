@@ -1,7 +1,7 @@
 import { useReadContract } from "wagmi";
 import { useEffect } from "react";
 
-const BestResults = ({ casinoAddress, casinoAbi, refresh }) => {
+const BestResults = ({ casinoAddress, casinoAbi, refresh, lastUpdate }) => {
   const { data: biggestSingleWinEver, refetch: refetchBiggestSingleWinEver } =
     useReadContract({
       address: casinoAddress,
@@ -20,6 +20,11 @@ const BestResults = ({ casinoAddress, casinoAbi, refresh }) => {
     refetchBiggestSingleWinEver();
     refetchBiggestTotalWinEver();
   }, [refresh]);
+
+  useEffect(() => {
+    refetchBiggestSingleWinEver();
+    refetchBiggestTotalWinEver();
+  }, [lastUpdate]);
 
   return (
     <div className="text-1xl text-center w-full p-2 mb-5 border border-purple-300 rounded-xl bg-black">

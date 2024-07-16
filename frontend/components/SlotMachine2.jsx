@@ -22,22 +22,31 @@ const SlotMachine2 = ({ spinning, result }) => {
         setReel2(motifs[Math.floor(Math.random() * motifs.length)]);
         setReel3(motifs[Math.floor(Math.random() * motifs.length)]);
       }, 100);
-    } else if (result && result.final) {
+    } else if (result) {
       clearInterval(interval);
-      if (result.won) {
-        const winningSymbol = motifs[Math.floor(Math.random() * motifs.length)];
-        setReel1(winningSymbol);
-        setReel2(winningSymbol);
-        setReel3(winningSymbol);
-        setResultMessage("Congratulations! You won!");
+      if (result.final) {
+        if (result.won) {
+          const winningSymbol =
+            motifs[Math.floor(Math.random() * motifs.length)];
+          setReel1(winningSymbol);
+          setReel2(winningSymbol);
+          setReel3(winningSymbol);
+          setResultMessage("Congratulations! You won!");
+        } else {
+          const firstSymbol = motifs[Math.floor(Math.random() * motifs.length)];
+          const secondSymbol = getRandomSymbolExcept(firstSymbol);
+          const thirdSymbol = getRandomSymbolExcept(firstSymbol);
+          setReel1(firstSymbol);
+          setReel2(secondSymbol);
+          setReel3(thirdSymbol);
+          setResultMessage("You lose, try again ;)");
+        }
       } else {
-        const firstSymbol = motifs[Math.floor(Math.random() * motifs.length)];
-        const secondSymbol = getRandomSymbolExcept(firstSymbol);
-        const thirdSymbol = getRandomSymbolExcept(firstSymbol);
-        setReel1(firstSymbol);
-        setReel2(secondSymbol);
-        setReel3(thirdSymbol);
-        setResultMessage("You lose, try again ;)");
+        // État réinitialisé ou initial
+        setReel1(motifs[0]);
+        setReel2(motifs[1]);
+        setReel3(motifs[2]);
+        setResultMessage("");
       }
     }
     return () => clearInterval(interval);

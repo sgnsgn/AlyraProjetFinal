@@ -15,9 +15,9 @@ const Game2 = ({
   tokenAddress,
   tokenAbi,
   setRefresh,
-  setSpinning,
+  setSlotUpdate,
   setResult,
-  setRefreshSlot2,
+  setSpinning,
 }) => {
   const [betAmount, setBetAmount] = useState("");
   const [approveSuccess, setApproveSuccess] = useState(false);
@@ -51,9 +51,8 @@ const Game2 = ({
     address: casinoAddress,
     abi: casinoAbi,
     eventName: "PlayerWon",
-    async onLogs(logs) {
-      await handleContractEvent(logs, "PlayerWon");
-      // setRefresh((prev) => !prev);
+    onLogs(logs) {
+      handleContractEvent(logs, "PlayerWon");
     },
   });
 
@@ -61,9 +60,8 @@ const Game2 = ({
     address: casinoAddress,
     abi: casinoAbi,
     eventName: "PlayerLost",
-    async onLogs(logs) {
-      await handleContractEvent(logs, "PlayerLost");
-      // setRefresh((prev) => !prev);
+    onLogs(logs) {
+      handleContractEvent(logs, "PlayerLost");
     },
   });
 
@@ -115,9 +113,7 @@ const Game2 = ({
   };
 
   const handleContractEvent = async (logs, eventType) => {
-    setResult({ won: eventType === "PlayerWon", final: true });
-    setSpinning(false);
-    setRefreshSlot2((prev) => !prev); // Ajouté ici
+    setSlotUpdate({ slot: 2, eventType, logs });
   };
 
   useEffect(() => {
@@ -181,7 +177,6 @@ const Game2 = ({
         </button>
         <input
           className="text-black w-full max-w-xs border border-gray-300 rounded-none px-4 py-2 mb-2"
-          // type="number"
           value={betAmount}
           onChange={(e) => setBetAmount(e.target.value)}
           placeholder="Enter bet amount"

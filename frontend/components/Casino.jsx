@@ -27,11 +27,11 @@ const Casino = ({ address }) => {
   const [isOwner, setIsOwner] = useState(false);
   const [refresh, setRefresh] = useState(false);
   const [events, setEvents] = useState([]);
-  const [refreshSlot1, setRefreshSlot1] = useState(false);
-  const [refreshSlot2, setRefreshSlot2] = useState(false);
+  const [slotUpdate, setSlotUpdate] = useState(null);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
   const [result1, setResult1] = useState(null);
-  const [spinning1, setSpinning1] = useState(false);
   const [result2, setResult2] = useState(null);
+  const [spinning1, setSpinning1] = useState(false);
   const [spinning2, setSpinning2] = useState(false);
   const chainId = useChainId();
 
@@ -39,7 +39,6 @@ const Casino = ({ address }) => {
     chainId === HARDHAT_EXPECTED_NETWORK_ID ||
     chainId === SEPOLIA_EXPECTED_NETWORK_ID;
 
-  // Function to fetch events
   const getEvents = async () => {
     try {
       const playerBoughtTokensEvents = await publicClient.getLogs({
@@ -114,7 +113,6 @@ const Casino = ({ address }) => {
         toBlock: "latest",
       });
 
-      // Function to combine events
       const combinedEvents = [
         ...playerBoughtTokensEvents.map((event) => ({
           type: "PlayerBoughtTokens",
@@ -190,6 +188,10 @@ const Casino = ({ address }) => {
     }
   };
 
+  const triggerUpdate = () => {
+    setLastUpdate(Date.now());
+  };
+
   useEffect(() => {
     if (isOnExpectedNetwork && address) {
       getEvents();
@@ -201,20 +203,46 @@ const Casino = ({ address }) => {
   }, [refresh]);
 
   useEffect(() => {
-    if (refreshSlot1) {
-      setResult1((previousResult) => ({ ...previousResult, final: true }));
-      setSpinning1(false);
-      getEvents();
-    }
-  }, [refreshSlot1]);
+    if (slotUpdate) {
+      const { slot, eventType, logs } = slotUpdate;
 
-  useEffect(() => {
-    if (refreshSlot2) {
-      setResult2((previousResult) => ({ ...previousResult, final: true }));
-      setSpinning2(false);
+      if (slot === 1) {
+        setResult1({
+          final: true,
+          won: eventType === "PlayerWon",
+          logs,
+        });
+        setSpinning1(false);
+
+        // Reset slot 2
+        setResult2({
+          final: false,
+          won: null,
+          logs: null,
+        });
+        setSpinning2(false);
+      } else if (slot === 2) {
+        setResult2({
+          final: true,
+          won: eventType === "PlayerWon",
+          logs,
+        });
+        setSpinning2(false);
+
+        // Reset slot 1
+        setResult1({
+          final: false,
+          won: null,
+          logs: null,
+        });
+        setSpinning1(false);
+      }
+
+      setSlotUpdate(null);
+      triggerUpdate();
       getEvents();
     }
-  }, [refreshSlot2]);
+  }, [slotUpdate]);
 
   const { data: ownerData, error: ownerError } = useReadContract({
     address: contractCasinoAddress,
@@ -245,20 +273,11 @@ const Casino = ({ address }) => {
 
   return (
     <div className="w-3/4 text-center items-center mx-auto">
-      {/* <div className="p-2 mb-5 border border-purple-300 rounded-xl bg-black">
-        <div>
-          Welcone on board to you :{" "}
-          <span className="text-purple-400">{address}</span>
-        </div>
-        <div>
-          You're actually on the network :{" "}
-          <span className="text-purple-400">{chainId}</span>
-        </div>
-      </div> */}
       <BestResults
         casinoAddress={contractCasinoAddress}
         casinoAbi={contractCasinoAbi}
         refresh={refresh}
+        lastUpdate={lastUpdate}
       />
       <Player
         address={address}
@@ -267,6 +286,7 @@ const Casino = ({ address }) => {
         casinoAddress={contractCasinoAddress}
         casinoAbi={contractCasinoAbi}
         refresh={refresh}
+        lastUpdate={lastUpdate}
       />
       <div className="text-1xl text-center mb-3 w-full flex justify-center">
         <div className="w-1/3 p-2 mr-1 border border-purple-300 rounded-xl bg-black">
@@ -302,7 +322,7 @@ const Casino = ({ address }) => {
               setRefresh={setRefresh}
               setSpinning={setSpinning1}
               setResult={setResult1}
-              setRefreshSlot1={setRefreshSlot1}
+              setSlotUpdate={setSlotUpdate}
             />
             <SlotMachine spinning={spinning1} result={result1} />
           </div>
@@ -319,7 +339,7 @@ const Casino = ({ address }) => {
               setRefresh={setRefresh}
               setSpinning={setSpinning2}
               setResult={setResult2}
-              setRefreshSlot1={setRefreshSlot2}
+              setSlotUpdate={setSlotUpdate}
             />
             <SlotMachine2 spinning={spinning2} result={result2} />
           </div>
