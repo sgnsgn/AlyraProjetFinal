@@ -18,6 +18,7 @@ const Game2 = ({
   setSlotUpdate,
   setResult,
   setSpinning,
+
 }) => {
   const [betAmount, setBetAmount] = useState("");
   const [approveSuccess, setApproveSuccess] = useState(false);
@@ -114,6 +115,7 @@ const Game2 = ({
 
   const handleContractEvent = async (logs, eventType) => {
     setSlotUpdate({ slot: 2, eventType, logs });
+
   };
 
   useEffect(() => {
