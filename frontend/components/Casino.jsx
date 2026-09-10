@@ -17,11 +17,21 @@ import Game2 from "./Game2";
 import SlotMachine from "./SlotMachine";
 import SlotMachine2 from "./SlotMachine2";
 import Events from "./Events";
-import { parseAbiItem } from "viem";
 import { publicClient } from "../utils/client";
 
 const HARDHAT_EXPECTED_NETWORK_ID = 31337;
 const SEPOLIA_EXPECTED_NETWORK_ID = 11155111;
+const EVENT_LOOKBACK_BLOCKS = 10_000n;
+const DISPLAYED_EVENT_NAMES = new Set([
+  "PlayerBoughtTokens",
+  "RandomWordsRequested",
+  "PlayerPlayedGame",
+  "PlayerWon",
+  "PlayerLost",
+  "PlayerWithdrewTokens",
+  "PlayerGetBackEthers",
+  "PlayerBecameInactive",
+]);
 
 const Casino = ({ address }) => {
   const [isOwner, setIsOwner] = useState(false);
@@ -41,144 +51,34 @@ const Casino = ({ address }) => {
 
   const getEvents = async () => {
     try {
-      const playerBoughtTokensEvents = await publicClient.getLogs({
+      const latestBlock = await publicClient.getBlockNumber();
+      const fromBlock =
+        latestBlock >= EVENT_LOOKBACK_BLOCKS
+          ? latestBlock - EVENT_LOOKBACK_BLOCKS + 1n
+          : 0n;
+
+      // One RPC call fetches and decodes every event in the recent window. The
+      // previous implementation made eight full-history scans on every refresh.
+      const recentEvents = await publicClient.getContractEvents({
         address: contractCasinoAddress,
-        event: parseAbiItem(
-          "event PlayerBoughtTokens(address indexed player, uint256 amount)"
-        ),
-        fromBlock: 6303800n,
-        toBlock: "latest",
+        abi: contractCasinoAbi,
+        fromBlock,
+        toBlock: latestBlock,
+        strict: true,
       });
 
-      const randomWordsRequestedEvents = await publicClient.getLogs({
-        address: contractCasinoAddress,
-        event: parseAbiItem(
-          "event RandomWordsRequested(uint256 indexed requestId, address indexed player, uint256 gameType, uint256 betAmount)"
-        ),
-        fromBlock: 6303800n,
-        toBlock: "latest",
-      });
-
-      const playerPlayedGameEvents = await publicClient.getLogs({
-        address: contractCasinoAddress,
-        event: parseAbiItem(
-          "event PlayerPlayedGame(address indexed player, uint8 gameType, uint256 betAmount, uint256 winAmount)"
-        ),
-        fromBlock: 6303800n,
-        toBlock: "latest",
-      });
-
-      const playerWonEvents = await publicClient.getLogs({
-        address: contractCasinoAddress,
-        event: parseAbiItem(
-          "event PlayerWon(address indexed player,uint256 betAmount,uint256 winAmount)"
-        ),
-        fromBlock: 6303800n,
-        toBlock: "latest",
-      });
-
-      const playerLostEvents = await publicClient.getLogs({
-        address: contractCasinoAddress,
-        event: parseAbiItem(
-          "event PlayerLost(address indexed player, uint256 betAmount)"
-        ),
-        fromBlock: 6303800n,
-        toBlock: "latest",
-      });
-
-      const playerWithdrewTokensEvents = await publicClient.getLogs({
-        address: contractCasinoAddress,
-        event: parseAbiItem(
-          "event PlayerWithdrewTokens(address indexed player, uint256 amount)"
-        ),
-        fromBlock: 6303800n,
-        toBlock: "latest",
-      });
-
-      const playerGetBackEthersEvents = await publicClient.getLogs({
-        address: contractCasinoAddress,
-        event: parseAbiItem(
-          "event PlayerGetBackEthers(address indexed player, uint256 amount)"
-        ),
-        fromBlock: 6303800n,
-        toBlock: "latest",
-      });
-
-      const playerBecameInactiveEvents = await publicClient.getLogs({
-        address: contractCasinoAddress,
-        event: parseAbiItem(
-          "event PlayerBecameInactive(address indexed player)"
-        ),
-        fromBlock: 6303800n,
-        toBlock: "latest",
-      });
-
-      const combinedEvents = [
-        ...playerBoughtTokensEvents.map((event) => ({
-          type: "PlayerBoughtTokens",
+      const combinedEvents = recentEvents
+        .filter((event) => DISPLAYED_EVENT_NAMES.has(event.eventName))
+        .map((event) => ({
+          type: event.eventName,
           address: event.address,
           args: {
             player: event.args.player,
           },
           blockNumber: Number(event.blockNumber),
-        })),
-        ...randomWordsRequestedEvents.map((event) => ({
-          type: "RandomWordsRequested",
-          address: event.address,
-          args: {
-            player: event.args.player,
-          },
-          blockNumber: Number(event.blockNumber),
-        })),
-        ...playerPlayedGameEvents.map((event) => ({
-          type: "PlayerPlayedGame",
-          address: event.address,
-          args: {
-            player: event.args.player,
-          },
-          blockNumber: Number(event.blockNumber),
-        })),
-        ...playerWonEvents.map((event) => ({
-          type: "PlayerWon",
-          address: event.address,
-          args: {
-            player: event.args.player,
-          },
-          blockNumber: Number(event.blockNumber),
-        })),
-        ...playerLostEvents.map((event) => ({
-          type: "PlayerLost",
-          address: event.address,
-          args: {
-            player: event.args.player,
-          },
-          blockNumber: Number(event.blockNumber),
-        })),
-        ...playerWithdrewTokensEvents.map((event) => ({
-          type: "PlayerWithdrewTokens",
-          address: event.address,
-          args: {
-            player: event.args.player,
-          },
-          blockNumber: Number(event.blockNumber),
-        })),
-        ...playerGetBackEthersEvents.map((event) => ({
-          type: "PlayerGetBackEthers",
-          address: event.address,
-          args: {
-            player: event.args.player,
-          },
-          blockNumber: Number(event.blockNumber),
-        })),
-        ...playerBecameInactiveEvents.map((event) => ({
-          type: "PlayerBecameInactive",
-          address: event.address,
-          args: {
-            player: event.args.player,
-          },
-          blockNumber: Number(event.blockNumber),
-        })),
-      ];
+          logIndex: event.logIndex,
+          transactionHash: event.transactionHash,
+        }));
 
       combinedEvents.sort((a, b) => b.blockNumber - a.blockNumber);
 
@@ -193,14 +93,10 @@ const Casino = ({ address }) => {
   };
 
   useEffect(() => {
-    if (isOnExpectedNetwork && address) {
+    if (isOnExpectedNetwork && address && isOwner) {
       getEvents();
     }
-  }, [isOnExpectedNetwork, address]);
-
-  useEffect(() => {
-    getEvents();
-  }, [refresh]);
+  }, [isOnExpectedNetwork, address, isOwner, refresh]);
 
   useEffect(() => {
     if (slotUpdate) {

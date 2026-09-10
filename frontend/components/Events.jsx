@@ -85,7 +85,10 @@ const Events = ({ events }) => {
             const args = event.args;
             const playerAddress = args.player || JSON.stringify(args);
             return (
-              <TableRow key={crypto.randomUUID()} className="text-center">
+              <TableRow
+                key={`${event.transactionHash}-${event.logIndex}`}
+                className="text-center"
+              >
                 <TableCell className="font-medium text-center">
                   <Badge className={eventType.className}>
                     {eventType.text}
@@ -109,7 +112,7 @@ const Events = ({ events }) => {
           Previous
         </button>
         <span className="text-white">
-          Page {currentPage + 1} of {totalPages}
+          Page {totalPages === 0 ? 0 : currentPage + 1} of {totalPages}
         </span>
         <button
           onClick={nextPage}
